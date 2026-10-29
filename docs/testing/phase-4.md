@@ -19,7 +19,9 @@ Translation snapshots the selected glossary at request start. Matching runs off 
 - The new loopback scenario validates the exact synthetic reference JSON, rejects missing/extra terms, and returns a clearly labeled fixed response. The integration test reloads a saved library, confirms manual source text, uses the actual URLSession client, and checks completion and review state. It initially failed because the old fixture rejected the new three-message request, then passed after the fixture update. This proves serialization and transport, not real translation or model adherence.
 - Storage tests cover create/edit/delete/selection across reopen, validation, duplicate suppression, corrupt/future files, failed saves, concurrent stores, and stale preview revisions. CSV tests cover BOM, quoted commas/quotes/CRLF, malformed data, invalid languages/flags, in-file and existing duplicates, and all-or-none application.
 - Matching/state tests cover partial-word rejection, punctuation, case-sensitive distinctions, Japanese text, direction/disabled filtering, conflict exclusion, reference limits, relevant-only request contents, missing preferred terms, and edits/retranslation while a request is active. Existing cancellation, delayed-response, clipboard-confirmation, and duplicate-request tests pass.
-- The required Debug app build in `.build/validation` succeeded. No app was launched/restarted, no input was synthesized, and no focus was changed.
+- The required Debug app build in `.build/validation` and its local signature verification succeeded. All 201 English/Japanese resource keys match, both string files pass `plutil`, and static localization references resolve. The running `.build/xcode` executable checksum was unchanged. No app was launched/restarted, no input was synthesized, and no focus was changed.
+
+- An independent whole-branch source review found no critical, important, or minor issues. Desktop/live-model behavior was explicitly excluded from that verdict.
 
 ### Limits and pending acceptance
 
@@ -50,7 +52,9 @@ CSVは文書化したUTF-8の7列を使います。全レコード、重複方�
 - 新しいループバックのシナリオは、合成した参照JSONを完全比較し、項目の不足・余分な項目を拒否して、テスト用と明示した固定文を返します。保存済み用語集の再読込、手入力の確定、本体URLSession、結果の完了と要確認状態まで確認しました。旧サーバーが3メッセージの要求を拒否して失敗することを確認後、対応を追加して成功しました。証明するのはデータ生成と通信であり、実翻訳や用語遵守ではありません。
 - 保存のテストは登録・編集・削除・選択の再読込、検証、重複抑止、破損・将来版、保存失敗、同時更新、古いプレビューを扱います。CSVはBOM、引用符・カンマ・CRLF、不正形式、言語・真偽値エラー、ファイル内／既存との重複、一括反映を確認しました。
 - 照合と状態管理は単語の部分一致拒否、句読点、大文字小文字の区別、日本語、方向・無効項目、競合除外、参照上限、関連項目だけの要求、指定訳語欠落、処理中の編集と再翻訳を確認しました。既存のキャンセル・遅延応答・コピー確認・重複要求のテストも成功しています。
-- 指定された`.build/validation`でのDebugアプリビルドが成功しました。アプリ起動・再起動、入力の送出、フォーカス変更は行っていません。
+- 指定された`.build/validation`でのDebugアプリビルドとローカル署名検証が成功しました。英日201キーが一致し、両言語のファイルが`plutil`を通り、静的な翻訳キー参照も解決しています。稼働用`.build/xcode`の実行ファイルのチェックサムは不変でした。アプリ起動・再起動、入力の送出、フォーカス変更は行っていません。
+
+- 独立したブランチ全体のソースレビューで、重大・重要・軽微のいずれも指摘はありませんでした。実画面・実モデルの動作は、その判定の対象外として明示しています。
 
 ### 上限と今後の確認
 

@@ -37,10 +37,10 @@
 
 **Interfaces:** `GlossaryEntry`, `Glossary`, `GlossaryLibrary`; `GlossaryStore(url:)`, `reload()`, `create(name:) -> UUID`, `rename(id:name:)`, `delete(id:)`, `select(_:)`, `saveEntry(_:in:)`, `deleteEntry(id:in:)`, `replaceEntries(_:in:expectedRevision:)`. Mutations throw `GlossaryFailure`; successful saves increment `revision`.
 
-- [ ] Add tests for CRUD/selection across reload, normalization/validation, duplicates, failed writes, corrupt/future versions, and stale concurrent stores.
-- [ ] Run the background suite; expected new contracts fail before implementation.
-- [ ] Implement bounded validation and atomic storage with file locking and optimistic disk comparison.
-- [ ] Run the background suite; expected pass. Commit the slice.
+- [x] Add tests for CRUD/selection across reload, normalization/validation, duplicates, failed writes, corrupt/future versions, and stale concurrent stores.
+- [x] Run the background suite; expected new contracts fail before implementation.
+- [x] Implement bounded validation and atomic storage with file locking and optimistic disk comparison.
+- [x] Run the background suite; expected pass. Commit the slice.
 
 ### Task 2: CSV preview and atomic import
 
@@ -48,10 +48,10 @@
 
 **Interfaces:** `GlossaryCSV.preview(data:existing:policy:) -> GlossaryImportPreview`, `export(_:) -> Data`; preview exposes rows, issues, duplicate count, and resulting entries. Apply through the store with the preview revision.
 
-- [ ] Test quoted/multiline/BOM data, malformed records and invalid fields, duplicates under each policy, round trip, invalid imports, and stale previews.
-- [ ] Run background tests; expected new contracts fail.
-- [ ] Implement a bounded CSV state machine and all-or-none preview/application.
-- [ ] Run background tests; expected pass. Commit the slice.
+- [x] Test quoted/multiline/BOM data, malformed records and invalid fields, duplicates under each policy, round trip, invalid imports, and stale previews.
+- [x] Run background tests; expected new contracts fail.
+- [x] Implement a bounded CSV state machine and all-or-none preview/application.
+- [x] Run background tests; expected pass. Commit the slice.
 
 ### Task 3: Matching and translation integration
 
@@ -59,19 +59,19 @@
 
 **Interfaces:** `GlossaryMatcher.context(for:source:target:glossary:) -> GlossaryContext`, `GlossaryContext.missingTerms(in:)`; `TranslationInput.glossary` defaults empty. Inject optional `GlossaryStore` into `TranslationModel` and snapshot at start.
 
-- [ ] Test word boundaries, punctuation, Japanese, case/direction/disabled filtering, conflict exclusion, request bounds, missing terms, serialized relevant-only reference data, and edits/retranslation/cancellation.
-- [ ] Run background tests; expected new contracts fail.
-- [ ] Implement matching, request snapshots, structured reference data and review state. Preserve existing requests without a glossary.
-- [ ] Run background tests; expected pass. Commit the slice.
+- [x] Test word boundaries, punctuation, Japanese, case/direction/disabled filtering, conflict exclusion, request bounds, missing terms, serialized relevant-only reference data, and edits/retranslation/cancellation.
+- [x] Run background tests; expected new contracts fail.
+- [x] Implement matching, request snapshots, structured reference data and review state. Preserve existing requests without a glossary.
+- [x] Run background tests; expected pass. Commit the slice.
 
 ### Task 4: Management UI, verification, and documentation
 
 **Files:** `GlossaryView.swift`, `GlossaryEntryEditor.swift`, `GlossaryImportView.swift`, delegate/menu integration, `TranslationContentView.swift`, English/Japanese resources, README, roadmap, `docs/testing/phase-4.md`.
 
-- [ ] Add a reusable glossary window: create/rename/delete, entry editor, search, active selection, import preview/policy and export. Use native file panels only on explicit clicks, with deletion confirmation and visible save/load errors.
-- [ ] Show active selection, request snapshot and review warnings in the popup. Changes require explicit retranslation.
-- [ ] Run background tests, the fixture runner, a separate Debug build, and localization consistency checks; expected pass. Do not claim actual UI or real-model acceptance.
-- [ ] Update aligned English/Japanese documentation, perform one independent whole-branch review, fix material findings, and commit. Leave the branch unmerged.
+- [x] Add a reusable glossary window: create/rename/delete, entry editor, search, active selection, import preview/policy and export. Use native file panels only on explicit clicks, with deletion confirmation and visible save/load errors.
+- [x] Show active selection, request snapshot and review warnings in the popup. Changes require explicit retranslation.
+- [x] Run background tests, the fixture runner, a separate Debug build, and localization consistency checks; expected pass. Do not claim actual UI or real-model acceptance.
+- [x] Update aligned English/Japanese documentation, perform one independent whole-branch review, fix material findings, and commit. Leave the branch unmerged.
 
 ## 日本語
 
