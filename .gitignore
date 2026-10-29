@@ -1,0 +1,30 @@
+# macOS
+.DS_Store
+
+# Swift / Xcode
+.build/
+.swiftpm/
+DerivedData/
+build/
+xcuserdata/
+*.xcuserstate
+*.app
+*.dmg
+*.xcarchive
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.local.json
+*.pem
+*.key
+*.p12
+*.mobileprovision
+
+# Local model and user data (keep fixtures outside these directories)
+/models/
+/local-data/
+*.gguf
+*.safetensors
+*.log
