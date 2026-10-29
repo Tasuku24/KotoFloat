@@ -61,10 +61,12 @@ Implementation and automated checks are ready. Physical AutoRaise acceptance rem
 
 ### Phase 2: Selected-text capture
 
-- [ ] Add Accessibility permission guidance and capture selected text, its source, and selection bounds when available.
-- [ ] Add copy-based capture when direct access fails, plus manual paste when capture fails.
-- [ ] Handle empty selections, copy failure, stale clipboard content, and app switches during capture.
-- [ ] Verify the browsers and PDF viewer used in practice and record which apps were confirmed to work.
+Implementation is ready. The app captured synthetic Chrome and Preview selections through its shortcut after permission approval; remaining physical-user checks are tracked in the [verification record](../../testing/phase-2.md).
+
+- [x] Add Accessibility permission guidance and capture selected text, its source, and selection bounds when available.
+- [x] Add copy-based capture when direct access fails, plus manual paste when capture fails.
+- [x] Handle empty selections, copy failure, stale clipboard content, and app switches during capture.
+- [x] Verify the browsers and PDF viewer used in practice and record which apps were confirmed to work.
 
 **Completion criteria:** The actual selected text reaches the popup. Unselected text is not accidentally sent, new clipboard content is not overwritten, and capture failures are explained.
 
@@ -181,10 +183,12 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第2段階：選択文章の取得
 
-- [ ] Accessibility権限案内と、選択文章・取得元・取得可能なら選択範囲の位置を取得する処理を用意する。
-- [ ] 直接取得できない場合のコピー取得と、失敗時の手動貼り付けを用意する。
-- [ ] 空選択、コピー失敗、古いクリップボード、処理中のアプリ切り替えを扱う。
-- [ ] 普段使うブラウザとPDFビューアで検証し、動作を確認できたアプリを記録する。
+実装は完了し、権限許可後にChromeとプレビューのテスト資料をアプリのショートカットから取得できることを確認しました。実際の利用者環境で残る確認は[検証記録](../../testing/phase-2.md)で管理します。
+
+- [x] Accessibility権限案内と、選択文章・取得元・取得可能なら選択範囲の位置を取得する処理を用意する。
+- [x] 直接取得できない場合のコピー取得と、失敗時の手動貼り付けを用意する。
+- [x] 空選択、コピー失敗、古いクリップボード、処理中のアプリ切り替えを扱う。
+- [x] 普段使うブラウザとPDFビューアで検証し、動作を確認できたアプリを記録する。
 
 **完了条件:** 実際に選択した原文をポップアップへ渡せる。選択していない文章を誤送信せず、ユーザーの新しいコピーを上書きしない。取得失敗を説明できる。
 

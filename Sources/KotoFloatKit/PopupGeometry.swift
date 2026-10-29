@@ -29,6 +29,22 @@ enum PopupGeometry {
             .allSatisfy(\.isFinite) && frame.width > 0 && frame.height > 0
     }
 
+    static func nearSelection(_ selection: CGRect?, size: CGSize, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        guard let selection, isUsable(selection),
+              let screen = screens.filter(isUsable).max(by: { intersectionArea(selection, $0) < intersectionArea(selection, $1) }),
+              intersectionArea(selection, screen) > 0 else {
+            return nearPointer(size: size, screens: screens, pointer: pointer)
+        }
+        let candidates = [
+            CGRect(x: selection.maxX + 16, y: selection.maxY - size.height, width: size.width, height: size.height),
+            CGRect(x: selection.minX - size.width - 16, y: selection.maxY - size.height, width: size.width, height: size.height),
+            CGRect(x: selection.minX, y: selection.minY - size.height - 16, width: size.width, height: size.height),
+            CGRect(x: selection.minX, y: selection.maxY + 16, width: size.width, height: size.height)
+        ].map { clamp($0, to: screen) }
+        return candidates.first(where: { !$0.intersects(selection) })
+            ?? candidates.min(by: { intersectionArea($0, selection) < intersectionArea($1, selection) })!
+    }
+
     private static func screen(at point: CGPoint, in screens: [CGRect]) -> CGRect? {
         screens.first(where: { $0.contains(point) }) ?? screens.first
     }

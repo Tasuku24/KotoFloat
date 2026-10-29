@@ -16,8 +16,10 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         popupController = controller
         configureMenuBar()
         configureAppMenu()
+        NotificationCenter.default.addObserver(self, selector: #selector(languageChanged),
+            name: AppLocalization.didChange, object: AppLocalization.shared)
         KeyboardShortcuts.onKeyUp(for: .showSamplePopup) { [weak controller] in
-            controller?.showSample()
+            controller?.captureSelectedText()
         }
         if !UserDefaults.standard.bool(forKey: "hasShownWelcome") {
             UserDefaults.standard.set(true, forKey: "hasShownWelcome")
@@ -32,12 +34,14 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         return false
     }
 
+    @objc private func showManualEntry() { popupController?.showManualEntry() }
+
     @objc private func showSample() { popupController?.showSample() }
 
     @objc private func showSettings() {
         guard let popupController else { return }
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 500, height: 540),
+            let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.contentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = L10n.text("settings.title")
             window.isReleasedWhenClosed = false
@@ -50,10 +54,11 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenuBar() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = statusItem ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
         item.button?.toolTip = "KotoFloat"
         let menu = NSMenu()
+        menu.addItem(actionItem("capture.manual", action: #selector(showManualEntry)))
         menu.addItem(actionItem("menu.showSample", action: #selector(showSample)))
         menu.addItem(actionItem("menu.settings", action: #selector(showSettings), key: ","))
         menu.addItem(.separator())
@@ -74,11 +79,20 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
 
         let editItem = NSMenuItem()
         let editMenu = NSMenu(title: L10n.text("menu.edit"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("menu.undo"), action: Selector(("undo:")), keyEquivalent: "z"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("menu.cut"), action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: L10n.text("menu.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         editItem.submenu = editMenu
         mainMenu.addItem(editItem)
         NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func languageChanged() {
+        settingsWindow?.title = L10n.text("settings.title")
+        configureMenuBar()
+        configureAppMenu()
     }
 
     private func actionItem(_ key: String, action: Selector, key equivalent: String = "") -> NSMenuItem {
