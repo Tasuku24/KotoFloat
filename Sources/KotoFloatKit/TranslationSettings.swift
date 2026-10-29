@@ -42,6 +42,7 @@ enum TokenUpdate { case keep, replace(String), remove }
 @MainActor @Observable final class TranslationPreferences {
     @ObservationIgnored private let defaults: UserDefaults
     private(set) var server: ServerConfiguration?
+    private(set) var revision = 0
     var sourceLanguage: TranslationLanguage {
         didSet { defaults.set(sourceLanguage.rawValue, forKey: "translation.sourceLanguage") }
     }
@@ -70,5 +71,6 @@ enum TokenUpdate { case keep, replace(String), remove }
         defaults.set(server.model, forKey: "translation.model")
         defaults.set(server.allowHTTP, forKey: "translation.allowHTTP")
         self.server = server
+        revision += 1
     }
 }
