@@ -24,7 +24,7 @@ Synthetic local HTML and a one-page PDF were opened in the installed Chrome and 
 | Chrome, ordinary webpage selection | Confirmed, 75 characters | Not separately exercised on this fixture | Not applicable | Not provided |
 | Preview, text PDF | Confirmed, 61 characters | Confirmed | All saved representations matched | Not provided |
 
-The actual app also dispatched its registered shortcut, preserved Chrome focus, displayed the permission-denied fallback, and accepted synthetic manual English/Japanese input through the editor and confirmation button. The rendered native popup was inspected. These results validate the production adapters on these fixtures. The separately signed KotoFloat app has its own permission; permission approval and end-to-end shortcut acceptance are tracked separately below. Scanned/image-only PDFs require manual input; OCR is outside Phase 2.
+The actual app also dispatched its registered shortcut, preserved Chrome focus, displayed the permission-denied fallback, and accepted synthetic manual English/Japanese input through the editor and confirmation button. The rendered native popup was inspected. These results validate the production adapters on these fixtures. After the user re-added the final build in Privacy & Security → Device Control and Data Access, the actual app captured the Chrome and Preview fixtures through the registered shortcut, displayed the correct source app/text, and preserved source focus. Chrome empty-selection and synthetic password-field tests displayed the expected explanations without changing the clipboard. One Preview copy attempt was interrupted by the input guard; a subsequent stable attempt succeeded and restored the saved representations. Scanned/image-only PDFs require manual input; OCR is outside Phase 2.
 
 ### Clipboard limits
 
@@ -34,16 +34,17 @@ A single unrelated writer before the requested Copy becomes observable cannot be
 
 ### Manual acceptance
 
-- [ ] Enable Accessibility for the built KotoFloat app, then use ⌃⌥⌘T on a Chrome selection and a Preview PDF selection.
-- [ ] Confirm source text and source app, absence of a fake translation, and that source focus is preserved when the popup appears.
-- [ ] Try no selection and permission denial; check the explanation and manual entry/paste path.
+- [x] Enable the final KotoFloat build in Device Control and Data Access, then use ⌃⌥⌘T on a Chrome selection and a Preview PDF selection.
+- [x] Confirm source text and source app, absence of a fake translation, and that source focus is preserved when the popup appears.
+- [x] Confirm no-selection, protected-field, and permission-denial explanations, plus manual text entry/confirmation.
+- [ ] Verify physical ⌘V paste and actual user copy interruptions with the user's resident utilities.
 - [ ] Choose AutoRaise compatibility, move focus between source and popup, and verify focused Escape.
 - [ ] Copy different text during capture and confirm that the newer copy remains available. Try the user's clipboard manager, if any.
 - [ ] Confirm near-selection/pointer fallback on the user's physical displays.
 
 ### Distribution status
 
-This is a locally ad-hoc-signed development build, not a notarized release. Rebuilding may require re-adding KotoFloat in Accessibility settings. Permissions must be granted by the user. No settings for AutoRaise or other resident utilities were changed.
+This is a locally ad-hoc-signed development build, not a notarized release. Rebuilding may require re-adding KotoFloat in Accessibility settings. Permissions must be granted by the user. This Mac labels the pane Device Control and Data Access; earlier macOS versions and the current app's help text use Accessibility. The settings-opening button routes to the correct pane. The final binary was left unchanged after the successful permission grant. No settings for AutoRaise or other resident utilities were changed.
 
 ## 日本語
 
@@ -69,7 +70,7 @@ This is a locally ad-hoc-signed development build, not a notarized release. Rebu
 | Chrome、通常のWebページの選択 | 75文字で確認 | この資料では別途確認せず | 対象外 | 取得できず |
 | プレビュー、文字を含むPDF | 61文字で確認 | 確認済み | 保存した全形式が一致 | 取得できず |
 
-アプリ本体でも登録済みショートカットの発火、Chromeのフォーカス維持、権限不足の案内、入力欄から英日テスト文章を入力して確定する操作を確認しました。実画面の表示も確認しています。上表は上記資料で本体の取得処理が動くことの検証です。別署名のKotoFloatアプリには独自の権限が必要なため、権限許可とショートカットからの通し確認は下記で別管理します。画像だけのスキャンPDFは手入力が必要です。OCRは第2段階の対象外です。
+アプリ本体でも登録済みショートカットの発火、Chromeのフォーカス維持、権限不足の案内、入力欄から英日テスト文章を入力して確定する操作を確認しました。実画面の表示も確認しています。上表は上記資料で本体の取得処理が動くことの検証です。利用者が最終ビルドをPrivacy & Security → Device Control and Data Accessへ再登録した後、アプリ本体でも登録済みショートカットからChrome・プレビューの文章を取得し、正しい原文・取得元の表示と元アプリのフォーカス維持を確認しました。Chromeの空選択・テスト用パスワード欄では、説明を表示しクリップボードを変更しないことも確認。プレビューのコピーは1回入力監視で中断し、その後の安定した試行では保存した形式の復元まで成功しました。画像だけのスキャンPDFは手入力が必要です。OCRは第2段階の対象外です。
 
 ### クリップボードの制限
 
@@ -79,13 +80,14 @@ This is a locally ad-hoc-signed development build, not a notarized release. Rebu
 
 ### 利用者による確認
 
-- [ ] ビルド済みKotoFloatのアクセシビリティを許可し、Chromeの選択文章とプレビューのPDFで⌃⌥⌘Tを使う。
-- [ ] 原文・取得元が正しく、仮の翻訳を表示せず、表示時に元アプリのフォーカスが維持されることを確認。
-- [ ] 空選択と権限不足の案内、手入力・貼り付けを確認。
+- [x] 最終ビルドのKotoFloatをDevice Control and Data Accessで許可し、Chromeの選択文章とプレビューのPDFで⌃⌥⌘Tを使う。
+- [x] 原文・取得元が正しく、仮の翻訳を表示せず、表示時に元アプリのフォーカスが維持されることを確認。
+- [x] 空選択・保護欄・権限不足の案内、手入力・確定を確認。
+- [ ] 利用者の常駐アプリ環境で、実際の⌘V貼り付けと取得中の別のコピーを確認。
 - [ ] AutoRaise互換を選び、原文とポップアップ間のフォーカス移動と、フォーカス時のEscを確認。
 - [ ] 取得中に別の文章をコピーし、新しい内容が残ることを確認。使用中ならクリップボード管理アプリとの併用も確認。
 - [ ] 実際の画面構成で、選択付近・カーソルへの代替配置を確認。
 
 ### 配布状態
 
-ローカルのアドホック署名による開発版で、公証済みの配布版ではありません。再ビルド後はアクセシビリティ設定への再登録が必要な場合があります。権限は利用者が許可します。AutoRaiseや他の常駐アプリの設定は変更していません。
+ローカルのアドホック署名による開発版で、公証済みの配布版ではありません。再ビルド後はアクセシビリティ設定への再登録が必要な場合があります。権限は利用者が許可します。このMacでは設定画面の名称がDevice Control and Data Accessで、以前のmacOSと現在のアプリ内案内はAccessibility／アクセシビリティを使用しています。設定を開くボタンは正しい画面へ移動します。権限の許可後は最終バイナリを変更していません。AutoRaiseや他の常駐アプリの設定は変更していません。

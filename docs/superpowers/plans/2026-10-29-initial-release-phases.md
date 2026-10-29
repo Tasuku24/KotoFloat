@@ -61,7 +61,7 @@ Implementation and automated checks are ready. Physical AutoRaise acceptance rem
 
 ### Phase 2: Selected-text capture
 
-Implementation is ready. Production adapters were verified with synthetic Chrome and Preview fixtures; app permission and end-to-end user acceptance are tracked in the [verification record](../../testing/phase-2.md).
+Implementation is ready. The app captured synthetic Chrome and Preview selections through its shortcut after permission approval; remaining physical-user checks are tracked in the [verification record](../../testing/phase-2.md).
 
 - [x] Add Accessibility permission guidance and capture selected text, its source, and selection bounds when available.
 - [x] Add copy-based capture when direct access fails, plus manual paste when capture fails.
@@ -183,7 +183,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第2段階：選択文章の取得
 
-実装は完了し、Chromeとプレビューのテスト資料で本体の取得処理を確認しました。アプリの権限と利用者による通し確認は[検証記録](../../testing/phase-2.md)で管理します。
+実装は完了し、権限許可後にChromeとプレビューのテスト資料をアプリのショートカットから取得できることを確認しました。実際の利用者環境で残る確認は[検証記録](../../testing/phase-2.md)で管理します。
 
 - [x] Accessibility権限案内と、選択文章・取得元・取得可能なら選択範囲の位置を取得する処理を用意する。
 - [x] 直接取得できない場合のコピー取得と、失敗時の手動貼り付けを用意する。
