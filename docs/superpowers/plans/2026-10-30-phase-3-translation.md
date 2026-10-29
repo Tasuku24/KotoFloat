@@ -20,9 +20,9 @@
 
 **Interfaces:** Validated `ServerConfiguration` provides models/chat URLs. `TranslationPreferences` persists non-secret settings. `CredentialStore` reads/writes endpoint-scoped tokens; the Keychain adapter reports failures without prompting during background work.
 
-- [ ] Add failing tests for URL normalization/rejection, HTTP opt-in, persistence, and endpoint-scoped credentials.
-- [ ] Implement the contracts and Keychain adapter. Preserve saved settings if credential writes fail.
-- [ ] Run `nice -n 10 swift test --jobs 2 --skip PopupControllerTests`. Expected: background suite passes. Commit the slice.
+- [x] Add failing tests for URL normalization/rejection, HTTP opt-in, persistence, and endpoint-scoped credentials.
+- [x] Implement the contracts and Keychain adapter. Preserve saved settings if credential writes fail.
+- [x] Run `nice -n 10 swift test --jobs 2 --skip PopupControllerTests`. Expected: background suite passes. Commit the slice.
 
 ### Task 2: OpenAI-compatible streaming client
 
@@ -30,9 +30,9 @@
 
 **Interfaces:** `TranslationServing` lists model IDs and streams text through an async callback. Requests snapshot configuration, credentials, source, and direction. `TranslationFailure` is a content-free, localizable error.
 
-- [ ] Add failing contract tests for requests, fragmented UTF-8/SSE, valid completion, malformed/truncated responses, authorization/model errors, and redirects.
-- [ ] Implement bounded parsing, connection checks, streaming, cancellation, timeouts, and explicit completion. Do not display reasoning/tool calls as translations.
-- [ ] Run the background suite. Expected: passing contracts without a remote service. Commit the slice.
+- [x] Add failing contract tests for requests, fragmented UTF-8/SSE, valid completion, malformed/truncated responses, authorization/model errors, and redirects.
+- [x] Implement bounded parsing, connection checks, streaming, cancellation, timeouts, and explicit completion. Do not display reasoning/tool calls as translations.
+- [x] Run the background suite. Expected: passing contracts without a remote service. Commit the slice.
 
 ### Task 3: Translation lifecycle and capture handoff
 
@@ -40,9 +40,9 @@
 
 **Interfaces:** `TranslationModel` exposes idle/running/completed/cancelled/failed states and partial output. Confirmed capture starts translation; manual entry, failures, and closing invalidate obsolete work. Repeated identical active requests are coalesced. Retranslate is explicit and snapshots the current direction.
 
-- [ ] Add failing tests for progress, errors, cancellation, late responses, repeated input, changed settings, and copy/manual confirmation.
-- [ ] Implement request IDs and a headless capture-to-translation handoff. Preserve source content and distinguish incomplete output.
-- [ ] Run the background suite. Expected: old requests cannot overwrite current results, and unconfirmed copies never translate. Commit the slice.
+- [x] Add failing tests for progress, errors, cancellation, late responses, repeated input, changed settings, and copy/manual confirmation.
+- [x] Implement request IDs and a headless capture-to-translation handoff. Preserve source content and distinguish incomplete output.
+- [x] Run the background suite. Expected: old requests cannot overwrite current results, and unconfirmed copies never translate. Commit the slice.
 
 ### Task 4: Connection settings and popup integration
 
@@ -50,9 +50,9 @@
 
 **Interfaces:** The shared preferences feed a saved endpoint/model and Keychain token. Connection check fetches models; trial translation uses a fixed, disclosed sample. The popup offers direction, progress, cancel, retry, and copy, without changing window geometry.
 
-- [ ] Add failing state tests for connection checking, token-write failure, and obsolete connection results.
-- [ ] Add non-scrolling settings tabs for connection and translation. Keep UI language separate from translation direction. Update popup controls and cancel on close/sample/manual entry.
-- [ ] Run background tests and a separate Debug build. Expected: compilation succeeds; live layout/focus remains unverified. Commit the slice.
+- [x] Add failing state tests for connection checking, token-write failure, and obsolete connection results.
+- [x] Add non-scrolling settings tabs for connection and translation. Keep UI language separate from translation direction. Update popup controls and cancel on close/sample/manual entry.
+- [x] Run background tests and a separate Debug build. Expected: compilation succeeds; live layout/focus remains unverified. Commit the slice.
 
 ### Task 5: Offline fixture, verification, and documentation
 

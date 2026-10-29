@@ -5,11 +5,12 @@ struct SettingsView: View {
     static let contentSize = CGSize(width: 600, height: 520)
 
     private enum Tab: String, CaseIterable {
-        case general, popup, capture
+        case general, popup, capture, connection, translation
         @MainActor var title: String { L10n.text("settings.tab.\(rawValue)") }
     }
 
     let controller: PopupController
+    let connection: ConnectionModel
     @State private var selectedTab = Tab.general
 
     var body: some View {
@@ -28,6 +29,12 @@ struct SettingsView: View {
                 case .general: generalSettings
                 case .popup: popupSettings
                 case .capture: captureSettings
+                case .connection: ConnectionSettingsView(model: connection)
+                case .translation:
+                    settingsGroup("translation.direction") {
+                        TranslationDirectionView(preferences: connection.preferences)
+                    }
+                    note("translation.privacy")
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -63,7 +70,7 @@ struct SettingsView: View {
                     Button(L10n.text("menu.showSample")) { controller.showSample() }
                     Button(L10n.text("capture.manual")) { controller.showManualEntry() }
                 }
-                note("capture.noTranslation")
+                note("translation.privacy")
             }
         }
     }
@@ -104,7 +111,7 @@ struct SettingsView: View {
                 Divider()
                 Button(L10n.text("capture.manual")) { controller.showManualEntry() }
             }
-            note("capture.noTranslation")
+            note("translation.privacy")
         }
     }
 

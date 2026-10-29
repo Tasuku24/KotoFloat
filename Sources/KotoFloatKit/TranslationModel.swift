@@ -22,6 +22,8 @@ import Observation
         self.clientFactory = clientFactory
     }
 
+    deinit { task?.cancel() }
+
     func start(text: CapturedText, force: Bool = false) {
         let next = TranslationInput(text: text.text, source: preferences.sourceLanguage, target: preferences.targetLanguage)
         if !force, state == .running, input == next, configuration == preferences.server,
