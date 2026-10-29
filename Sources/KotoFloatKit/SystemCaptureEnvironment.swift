@@ -3,6 +3,7 @@ import AppKit
 
 @MainActor
 final class SystemCaptureEnvironment: CaptureEnvironment {
+    private let copyGate = CopyRequestGate()
     var isTrusted: Bool { AXIsProcessTrusted() }
 
     func currentSource() -> SourceApplication? {
@@ -17,8 +18,10 @@ final class SystemCaptureEnvironment: CaptureEnvironment {
     }
 
     func copySelection(from source: SourceApplication) async throws -> String {
-        let session = SystemCopySession(source: source)
-        return try await ClipboardCapture(clipboard: SystemClipboard()).capture(session: session)
+        try await copyGate.run {
+            let session = SystemCopySession(source: source)
+            return try await ClipboardCapture(clipboard: SystemClipboard()).capture(session: session)
+        }
     }
 
     static func requestAccessibility() {
@@ -51,6 +54,7 @@ private final class SystemCopySession: CopySession {
                 }
             }
         }
+        if monitor == nil { interrupted = true }
         activationObserver = NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didActivateApplicationNotification, object: nil, queue: .main
         ) { [weak self] _ in

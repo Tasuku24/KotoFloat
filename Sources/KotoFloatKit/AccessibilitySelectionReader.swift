@@ -71,6 +71,7 @@ enum AccessibilitySelectionReader {
     }
 
     private static func attribute(_ name: String, of element: AXUIElement) -> CFTypeRef? {
+        AXUIElementSetMessagingTimeout(element, 0.2)
         var result: CFTypeRef?
         return AXUIElementCopyAttributeValue(element, name as CFString, &result) == .success ? result : nil
     }

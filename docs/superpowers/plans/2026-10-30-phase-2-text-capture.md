@@ -13,37 +13,37 @@
 **Files:** `SelectionCapture.swift`, `CaptureModel.swift`, `SelectionCaptureTests.swift`.
 **Interfaces:** Source application identity, selected text/bounds, explicit failure cases, direct vs. copy vs. manual origin; an injectable capture environment; observable UI state with request identity.
 
-- [ ] Write failing tests for direct capture, missing permission/source, empty/secure selections, copy confirmation, app changes, cancellation, and stale completions.
-- [ ] Implement the contracts, orchestration, and in-memory state; keep native reads injectable at the OS boundary.
-- [ ] Run `swift test`. Expected: all tests pass. Commit this slice.
+- [x] Write failing tests for direct capture, missing permission/source, empty/secure selections, copy confirmation, app changes, cancellation, and stale completions.
+- [x] Implement the contracts, orchestration, and in-memory state; keep native reads injectable at the OS boundary.
+- [x] Run `swift test`. Expected: all tests pass. Commit this slice.
 
 ### Task 2: Native Accessibility and clipboard adapters
 
 **Files:** `AccessibilitySelectionReader.swift`, `ClipboardCapture.swift`, `SystemCaptureEnvironment.swift`, adapter tests.
 **Interfaces:** Implement Task 1's environment; clipboard snapshot/generation and an input session isolate OS events from deterministic transaction tests.
 
-- [ ] Write failing tests for stale clipboard, non-text copy, multi-format restoration, newer-copy preservation, timeout, source/input changes, held modifiers, and cancellation.
-- [ ] Implement bounded AX reads, secure-field checks, selection range/bounds, source identity checks, permission opening, and targeted Copy with no pointer movement.
-- [ ] Implement snapshot size limits and generation-checked restoration. Never clear the clipboard before Copy. Fail closed on uncertain state; copy results require user confirmation.
-- [ ] Run `swift test`. Expected: all tests pass. Commit this slice.
+- [x] Write failing tests for stale clipboard, non-text copy, multi-format restoration, newer-copy preservation, timeout, source/input changes, held modifiers, and cancellation.
+- [x] Implement bounded AX reads, secure-field checks, selection range/bounds, source identity checks, permission opening, and targeted Copy with no pointer movement.
+- [x] Implement snapshot size limits and generation-checked restoration. Never clear the clipboard before Copy. Fail closed on uncertain state; copy results require user confirmation.
+- [x] Run `swift test`. Expected: all tests pass. Commit this slice.
 
 ### Task 3: Popup, settings, and shortcut integration
 
 **Files:** Existing popup/delegate/settings/geometry/localization files, `CaptureContentView.swift`, popup and geometry tests.
 **Interfaces:** Task 1's state feeds the existing popup; Task 2 supplies the live environment. Keep the existing shortcut storage key and Phase 1 sample tools.
 
-- [ ] Write failing tests for captured/error/manual content, cancelled requests on close, mode switching, and selection-based placement with pointer fallback.
-- [ ] Make the shortcut capture text. Add permission status/actions, a manual paste editor, copy-result confirmation, source labels, and a clear “translation comes later” state in both languages.
-- [ ] Keep focus, Escape, geometry, and AutoRaise behavior. Add standard Edit actions for manual input.
-- [ ] Run `swift test` and Debug/Release Xcode builds. Expected: pass. Commit this slice.
+- [x] Write failing tests for captured/error/manual content, cancelled requests on close, mode switching, and selection-based placement with pointer fallback.
+- [x] Make the shortcut capture text. Add permission status/actions, a manual paste editor, copy-result confirmation, source labels, and a clear “translation comes later” state in both languages.
+- [x] Keep focus, Escape, geometry, and AutoRaise behavior. Add standard Edit actions for manual input.
+- [x] Run `swift test` and Debug/Release Xcode builds. Expected: pass. Commit this slice.
 
 ### Task 4: Real-app verification and documentation
 
 **Files:** `docs/testing/phase-2.md`, README, phased roadmap.
 
-- [ ] Use synthetic non-private fixtures in Chrome and Preview. Do not move the pointer. Record actual selection/bounds and clipboard results; label permission/environment blocks explicitly.
-- [ ] Record automated and live evidence, pending user checks, and copy limitations in English followed by Japanese. Update the roadmap without claiming unverified acceptance.
-- [ ] Run final relevant checks and obtain one fresh whole-branch review under executing-plans. Fix important findings with regression tests. Commit and leave the branch ready for review.
+- [x] Use synthetic non-private fixtures in Chrome and Preview. Do not move the pointer. Record actual selection/bounds and clipboard results; label permission/environment blocks explicitly.
+- [x] Record automated and live evidence, pending user checks, and copy limitations in English followed by Japanese. Update the roadmap without claiming unverified acceptance.
+- [x] Run final relevant checks and obtain one fresh whole-branch review under executing-plans. Fix important findings with regression tests. Commit and leave the branch ready for review.
 
 ### Review focus
 
@@ -66,37 +66,37 @@
 **ファイル:** `SelectionCapture.swift`、`CaptureModel.swift`、`SelectionCaptureTests.swift`。
 **接続仕様:** 取得元アプリ、選択文章・位置、明確な失敗理由、直接取得・コピー・手入力の区別、差し替え可能な取得環境、要求IDを持つ画面状態。
 
-- [ ] 直接取得、権限・取得元なし、空選択・保護欄、コピー確認、アプリ切り替え、キャンセル、古い完了を検証する失敗テストを作る。
-- [ ] 契約・取得手順・メモリ内状態を実装し、OSとの境界だけを差し替え可能にする。
-- [ ] `swift test` で全件成功を確認し、コミットする。
+- [x] 直接取得、権限・取得元なし、空選択・保護欄、コピー確認、アプリ切り替え、キャンセル、古い完了を検証する失敗テストを作る。
+- [x] 契約・取得手順・メモリ内状態を実装し、OSとの境界だけを差し替え可能にする。
+- [x] `swift test` で全件成功を確認し、コミットする。
 
 ### タスク2：Accessibilityとクリップボードの実装
 
 **ファイル:** `AccessibilitySelectionReader.swift`、`ClipboardCapture.swift`、`SystemCaptureEnvironment.swift`、関連テスト。
 **接続仕様:** タスク1の取得環境を実装する。クリップボードのスナップショット・世代と入力監視でOS操作を決定的なテストから分離する。
 
-- [ ] 古いクリップボード、非テキスト、複数形式の復元、新しいコピーの保持、タイムアウト、取得元・入力変更、修飾キー、キャンセルの失敗テストを作る。
-- [ ] 時間制限付きAX読み取り、保護欄判定、選択範囲・位置、取得元確認、権限案内、対象を指定したコピーを実装する。ポインターは動かさない。
-- [ ] 保存容量の上限と世代確認付き復元を実装する。コピー前にクリップボードを消去しない。不明確な状態は採用せず、コピー結果には利用者確認を求める。
-- [ ] `swift test` で全件成功を確認し、コミットする。
+- [x] 古いクリップボード、非テキスト、複数形式の復元、新しいコピーの保持、タイムアウト、取得元・入力変更、修飾キー、キャンセルの失敗テストを作る。
+- [x] 時間制限付きAX読み取り、保護欄判定、選択範囲・位置、取得元確認、権限案内、対象を指定したコピーを実装する。ポインターは動かさない。
+- [x] 保存容量の上限と世代確認付き復元を実装する。コピー前にクリップボードを消去しない。不明確な状態は採用せず、コピー結果には利用者確認を求める。
+- [x] `swift test` で全件成功を確認し、コミットする。
 
 ### タスク3：ポップアップ・設定・ショートカットとの接続
 
 **ファイル:** 既存のポップアップ・デリゲート・設定・配置・言語ファイル、`CaptureContentView.swift`、画面と配置のテスト。
 **接続仕様:** タスク1の状態を既存ポップアップへ渡し、タスク2で実際に取得する。ショートカットの保存キーと第1段階のサンプル操作を維持する。
 
-- [ ] 取得・エラー・手入力の表示、閉じる際のキャンセル、モード切り替え、選択付近への配置とカーソルへの代替の失敗テストを作る。
-- [ ] ショートカットで文章を取得する。権限状態・操作、貼り付け入力欄、コピー結果の確認、取得元、翻訳は後続段階である表示を英日で追加する。
-- [ ] フォーカス、Esc、位置、AutoRaiseの動作を維持し、入力用の標準編集操作を追加する。
-- [ ] `swift test` とDebug/Releaseビルドの成功を確認し、コミットする。
+- [x] 取得・エラー・手入力の表示、閉じる際のキャンセル、モード切り替え、選択付近への配置とカーソルへの代替の失敗テストを作る。
+- [x] ショートカットで文章を取得する。権限状態・操作、貼り付け入力欄、コピー結果の確認、取得元、翻訳は後続段階である表示を英日で追加する。
+- [x] フォーカス、Esc、位置、AutoRaiseの動作を維持し、入力用の標準編集操作を追加する。
+- [x] `swift test` とDebug/Releaseビルドの成功を確認し、コミットする。
 
 ### タスク4：実アプリ確認と文書
 
 **ファイル:** `docs/testing/phase-2.md`、README、段階計画。
 
-- [ ] 非個人情報のテスト文章をChromeとプレビューで使用する。ポインターは動かさない。選択・位置・クリップボードの実際の結果と、権限・環境の制約を記録する。
-- [ ] 自動・実機検証、利用者確認の残り、コピーの制限を英語→日本語で記載する。未確認を完了扱いにせず計画を更新する。
-- [ ] 最終確認とexecuting-plansに従う独立したブランチ全体レビューを行う。重要な指摘は回帰テストで修正する。コミットしてレビュー可能な状態にする。
+- [x] 非個人情報のテスト文章をChromeとプレビューで使用する。ポインターは動かさない。選択・位置・クリップボードの実際の結果と、権限・環境の制約を記録する。
+- [x] 自動・実機検証、利用者確認の残り、コピーの制限を英語→日本語で記載する。未確認を完了扱いにせず計画を更新する。
+- [x] 最終確認とexecuting-plansに従う独立したブランチ全体レビューを行う。重要な指摘は回帰テストで修正する。コミットしてレビュー可能な状態にする。
 
 ### レビュー重点項目
 
