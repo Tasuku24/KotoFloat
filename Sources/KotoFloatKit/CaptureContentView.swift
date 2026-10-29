@@ -7,6 +7,7 @@ struct PopupRootView: View {
     let translation: TranslationModel?
     let toggleTopmost: () -> Void
     let openSettings: () -> Void
+    var openGlossaries: () -> Void = {}
 
     var body: some View {
         Group {
@@ -15,7 +16,7 @@ struct PopupRootView: View {
                     toggleTopmost: toggleTopmost, openSettings: openSettings)
             } else {
                 CaptureContentView(model: capture, preferences: preferences, translation: translation,
-                    toggleTopmost: toggleTopmost, openSettings: openSettings)
+                    toggleTopmost: toggleTopmost, openSettings: openSettings, openGlossaries: openGlossaries)
             }
         }
         .environment(\.locale, AppLocalization.shared.locale)
@@ -28,6 +29,7 @@ struct CaptureContentView: View {
     let translation: TranslationModel?
     let toggleTopmost: () -> Void
     let openSettings: () -> Void
+    var openGlossaries: () -> Void = {}
     @FocusState private var manualFocused: Bool
 
     var body: some View {
@@ -85,7 +87,7 @@ struct CaptureContentView: View {
         case .captured(let text):
             sourceText(text)
             Divider()
-            if let translation { TranslationContentView(model: translation, openSettings: openSettings) }
+            if let translation { TranslationContentView(model: translation, openSettings: openSettings, openGlossaries: openGlossaries) }
         case .needsConfirmation(let text):
             sourceText(text)
             Text(L10n.text("capture.confirmHint")).font(.callout)

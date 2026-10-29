@@ -8,16 +8,21 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
     private var connectionModel: ConnectionModel?
+    private var glossaryStore: GlossaryStore?
+    private var glossaryWindow: NSWindow?
 
     public override init() { super.init() }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
         let translationPreferences = TranslationPreferences()
         let credentials = KeychainCredentialStore()
-        let translation = TranslationModel(preferences: translationPreferences, credentials: credentials)
+        let glossaries = GlossaryStore()
+        glossaryStore = glossaries
+        let translation = TranslationModel(preferences: translationPreferences, credentials: credentials, glossaries: glossaries)
         connectionModel = ConnectionModel(preferences: translationPreferences, credentials: credentials)
         let controller = PopupController(preferences: PopupPreferences(), translation: translation)
         controller.openSettings = { [weak self] in self?.showSettings() }
+        controller.openGlossaries = { [weak self] in self?.showGlossaries() }
         popupController = controller
         configureMenuBar()
         configureAppMenu()
@@ -43,6 +48,22 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func showSample() { popupController?.showSample() }
 
+    @objc private func showGlossaries() {
+        guard let glossaryStore else { return }
+        if glossaryWindow == nil {
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 960, height: 640),
+                                  styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+            window.title = L10n.text("glossary.title")
+            window.isReleasedWhenClosed = false
+            window.contentMinSize = CGSize(width: 800, height: 560)
+            window.contentView = NSHostingView(rootView: GlossaryView(store: glossaryStore))
+            window.center()
+            glossaryWindow = window
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        glossaryWindow?.makeKeyAndOrderFront(nil)
+    }
+
     @objc private func showSettings() {
         guard let popupController, let connectionModel else { return }
         if settingsWindow == nil {
@@ -64,6 +85,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         item.button?.toolTip = "KotoFloat"
         let menu = NSMenu()
         menu.addItem(actionItem("capture.manual", action: #selector(showManualEntry)))
+        menu.addItem(actionItem("menu.glossaries", action: #selector(showGlossaries)))
         menu.addItem(actionItem("menu.showSample", action: #selector(showSample)))
         menu.addItem(actionItem("menu.settings", action: #selector(showSettings), key: ","))
         menu.addItem(.separator())
@@ -76,6 +98,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         let mainMenu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu(title: "KotoFloat")
+        appMenu.addItem(actionItem("menu.glossaries", action: #selector(showGlossaries)))
         appMenu.addItem(actionItem("menu.settings", action: #selector(showSettings), key: ","))
         appMenu.addItem(.separator())
         appMenu.addItem(NSMenuItem(title: L10n.text("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
@@ -96,6 +119,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func languageChanged() {
         settingsWindow?.title = L10n.text("settings.title")
+        glossaryWindow?.title = L10n.text("glossary.title")
         configureMenuBar()
         configureAppMenu()
     }
