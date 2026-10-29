@@ -5,6 +5,7 @@ enum TranslationFailure: String, Error, Equatable {
     case invalidEndpoint, insecureConnection, credentialsUnavailable, invalidToken, modelRequired
     case authentication, modelUnavailable, rateLimited, serverUnavailable, requestRejected
     case malformedResponse, interrupted, timedOut, network, outputTooLarge, emptyResponse, truncated
+    case glossaryTooLarge, glossaryUnavailable
 }
 
 struct ServerConfiguration: Equatable, Sendable {
