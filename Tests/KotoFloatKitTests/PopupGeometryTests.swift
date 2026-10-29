@@ -61,6 +61,30 @@ struct PopupGeometryTests {
             == CGRect(x: 100, y: 100, width: 360, height: 240))
     }
 
+    @Test func placesBesideSelectionWithoutCoveringOriginal() {
+        let selection = CGRect(x: 100, y: 550, width: 200, height: 30)
+        let result = PopupGeometry.nearSelection(selection, size: CGSize(width: 480, height: 400),
+            screens: [main], pointer: .zero)
+        #expect(main.contains(result))
+        #expect(!result.intersects(selection))
+        #expect(result == CGRect(x: 316, y: 180, width: 480, height: 400))
+    }
+
+    @Test func selectionNearRightEdgeUsesSpaceToItsLeft() {
+        let selection = CGRect(x: 1200, y: 500, width: 200, height: 30)
+        let result = PopupGeometry.nearSelection(selection, size: CGSize(width: 480, height: 400),
+            screens: [main], pointer: .zero)
+        #expect(!result.intersects(selection))
+        #expect(result == CGRect(x: 704, y: 130, width: 480, height: 400))
+    }
+
+    @Test func unavailableOrOffscreenSelectionFallsBackToPointer() {
+        for selection in [nil, CGRect(x: 8000, y: 8000, width: 100, height: 20)] {
+            #expect(PopupGeometry.nearSelection(selection, size: CGSize(width: 480, height: 400),
+                screens: [main], pointer: CGPoint(x: 100, y: 800)) == CGRect(x: 116, y: 384, width: 480, height: 400))
+        }
+    }
+
     @Test func handlesTemporarilyMissingScreens() {
         let saved = CGRect(x: 100, y: 100, width: 480, height: 400)
         #expect(PopupGeometry.restore(saved, screens: [], pointer: .zero) == saved)

@@ -6,10 +6,13 @@ final class PopupController: NSObject, NSWindowDelegate {
     private(set) var panel: NSWindow
     let preferences: PopupPreferences
     let sample = SampleContent()
+    let capture = CaptureModel()
+    private let captureEnvironment: any CaptureEnvironment
     var openSettings: (() -> Void)?
 
-    init(preferences: PopupPreferences) {
+    init(preferences: PopupPreferences, captureEnvironment: any CaptureEnvironment = SystemCaptureEnvironment()) {
         self.preferences = preferences
+        self.captureEnvironment = captureEnvironment
         panel = PopupWindowFactory.make(mode: preferences.focusMode)
         super.init()
         configurePanel()
@@ -19,7 +22,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     private func configurePanel() {
         panel.delegate = self
-        let hostingView = NSHostingView(rootView: PopupContentView(preferences: preferences, sample: sample,
+        let hostingView = NSHostingView(rootView: PopupRootView(preferences: preferences, sample: sample, capture: capture,
             toggleTopmost: { [weak self] in
                 guard let self else { return }
                 setAlwaysOnTop(!preferences.alwaysOnTop)
@@ -30,6 +33,12 @@ final class PopupController: NSObject, NSWindowDelegate {
     }
 
     func showSample() {
+        capture.cancel()
+        capture.showsSample = true
+        showPopup()
+    }
+
+    private func showPopup(selectionBounds: CGRect? = nil) {
         let screens = NSScreen.screens.map(\.visibleFrame)
         let pointer = NSEvent.mouseLocation
         let frame: CGRect
@@ -39,6 +48,9 @@ final class PopupController: NSObject, NSWindowDelegate {
         case .nearPointer:
             frame = PopupGeometry.nearPointer(size: preferences.savedFrame?.size ?? PopupGeometry.defaultSize,
                                              screens: screens, pointer: pointer)
+        case .nearSelection:
+            frame = PopupGeometry.nearSelection(selectionBounds,
+                size: preferences.savedFrame?.size ?? PopupGeometry.defaultSize, screens: screens, pointer: pointer)
         }
         panel.setFrame(frame, display: panel.isVisible)
         applyWindowLevel()
@@ -46,6 +58,22 @@ final class PopupController: NSObject, NSWindowDelegate {
         // 利用者がパネルをクリックするまで、元アプリのキーボードフォーカスを維持する。
         panel.orderFrontRegardless()
         preferences.savedFrame = panel.frame
+    }
+
+    func captureSelectedText() {
+        capture.start(using: SelectionCapture(environment: captureEnvironment)) { [weak self] in
+            guard let self else { return }
+            let bounds: CGRect?
+            if case .captured(let text) = capture.state { bounds = text.bounds } else { bounds = nil }
+            showPopup(selectionBounds: bounds)
+        }
+    }
+
+    func showManualEntry() {
+        capture.beginManualEntry()
+        showPopup()
+        NSApp.activate(ignoringOtherApps: true)
+        panel.makeKeyAndOrderFront(nil)
     }
 
     func setAlwaysOnTop(_ enabled: Bool) {
@@ -73,7 +101,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func resetPosition() {
         preferences.savedFrame = nil
-        showSample()
+        showPopup()
     }
 
     func recoverVisibleFrame() {
@@ -86,7 +114,10 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func windowDidMove(_ notification: Notification) { saveFrameIfVisible() }
     func windowDidResize(_ notification: Notification) { saveFrameIfVisible() }
-    func windowWillClose(_ notification: Notification) { preferences.savedFrame = panel.frame }
+    func windowWillClose(_ notification: Notification) {
+        preferences.savedFrame = panel.frame
+        capture.cancel()
+    }
 
     @objc private func screensChanged(_ notification: Notification) { recoverVisibleFrame() }
 

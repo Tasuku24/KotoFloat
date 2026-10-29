@@ -13,6 +13,10 @@ struct SettingsView: View {
                 Text(L10n.text("settings.shortcutHint"))
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section(L10n.text("permission.title")) {
+                AccessibilityPermissionView()
+                Button(L10n.text("capture.manual")) { controller.showManualEntry() }
+            }
             Section(L10n.text("settings.popup")) {
                 Toggle(L10n.text("settings.topmost"), isOn: Binding(
                     get: { controller.preferences.alwaysOnTop },
@@ -22,6 +26,7 @@ struct SettingsView: View {
                     set: { controller.preferences.placement = $0 })) {
                     Text(L10n.text("settings.previous")).tag(PopupPlacement.previousPosition)
                     Text(L10n.text("settings.pointer")).tag(PopupPlacement.nearPointer)
+                    Text(L10n.text("settings.selection")).tag(PopupPlacement.nearSelection)
                 }
                 Text(L10n.text("settings.positionHint"))
                     .font(.caption).foregroundStyle(.secondary)
@@ -42,13 +47,13 @@ struct SettingsView: View {
             }
             Section {
                 Text(L10n.text("settings.focusHint"))
-                Text(L10n.text("sample.notice"))
+                Text(L10n.text("capture.noTranslation"))
                     .foregroundStyle(.secondary)
             }
             .font(.callout)
         }
         .formStyle(.grouped)
-        .frame(width: 500, height: 540)
+        .frame(width: 540, height: 720)
     }
 }
 

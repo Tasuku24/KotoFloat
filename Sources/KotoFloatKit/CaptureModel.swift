@@ -11,6 +11,7 @@ final class CaptureModel {
         case manual
     }
     private(set) var state: State = .idle
+    var showsSample = true
     var manualText = ""
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var requestID = UUID()
@@ -18,6 +19,7 @@ final class CaptureModel {
     func start(using capture: SelectionCapture, completion: @escaping @MainActor () -> Void) {
         cancel()
         let id = requestID
+        showsSample = false
         state = .capturing
         task = Task { [weak self] in
             do {
@@ -39,6 +41,7 @@ final class CaptureModel {
     }
     func beginManualEntry() {
         cancel()
+        showsSample = false
         state = .manual
     }
     func acceptManualText() {

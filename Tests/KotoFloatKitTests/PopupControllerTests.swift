@@ -185,6 +185,67 @@ struct PopupControllerTests {
         }
     }
 
+    @Test func capturedSelectionReusesPopupAndPreservesFrameAndFocus() async throws {
+        try await withCaptureController { controller, env in
+            controller.showSample()
+            let frame = controller.panel.frame
+            let number = controller.panel.windowNumber
+            let source = NSWorkspace.shared.frontmostApplication?.processIdentifier
+            controller.captureSelectedText()
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(controller.capture.state == .captured(CapturedText(text: "  selected\ntext  ", source: env.source, bounds: nil, method: .accessibility)))
+            #expect(!controller.capture.showsSample)
+            #expect(controller.panel.isVisible)
+            #expect(controller.panel.frame == frame)
+            #expect(controller.panel.windowNumber == number)
+            #expect(NSWorkspace.shared.frontmostApplication?.processIdentifier == source)
+            controller.setFocusMode(.autoRaiseCompatible)
+            #expect(controller.capture.state == .captured(CapturedText(text: "  selected\ntext  ", source: env.source, bounds: nil, method: .accessibility)))
+        }
+    }
+
+    @Test func permissionFailureOpensExplainedFallback() async throws {
+        try await withCaptureController { controller, env in
+            env.isTrusted = false
+            controller.captureSelectedText()
+            try await Task.sleep(for: .milliseconds(50))
+            #expect(controller.capture.state == .failed(.permissionRequired))
+            #expect(controller.panel.isVisible)
+            controller.showManualEntry()
+            #expect(controller.capture.state == .manual)
+            #expect(!controller.capture.showsSample)
+        }
+    }
+
+    @Test func closingPopupCancelsPendingCaptureWithoutReopening() async throws {
+        try await withCaptureController { controller, env in
+            controller.showSample()
+            env.selection = .unavailable
+            var resume: CheckedContinuation<String, Never>?
+            env.copyAction = { await withCheckedContinuation { resume = $0 } }
+            controller.captureSelectedText()
+            try await Task.sleep(for: .milliseconds(20))
+            #expect(controller.capture.state == .capturing)
+            let finish = try #require(resume)
+            controller.panel.close()
+            finish.resume(returning: "late copy")
+            try await Task.sleep(for: .milliseconds(20))
+            #expect(!controller.panel.isVisible)
+            #expect(controller.capture.state == .idle)
+        }
+    }
+
+    private func withCaptureController(_ body: (PopupController, CaptureEnvironmentStub) async throws -> Void) async throws {
+        _ = NSApplication.shared
+        NSApp.setActivationPolicy(.accessory)
+        let suite = "KotoFloatCapturePopupTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        let env = CaptureEnvironmentStub()
+        let controller = PopupController(preferences: PopupPreferences(defaults: defaults), captureEnvironment: env)
+        defer { controller.panel.close(); defaults.removePersistentDomain(forName: suite) }
+        try await body(controller, env)
+    }
+
     private func withController(_ body: (PopupController) throws -> Void) throws {
         _ = NSApplication.shared
         NSApp.setActivationPolicy(.accessory)

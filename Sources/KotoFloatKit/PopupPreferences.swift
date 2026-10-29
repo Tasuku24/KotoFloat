@@ -5,6 +5,7 @@ import Observation
 enum PopupPlacement: String, CaseIterable {
     case previousPosition
     case nearPointer
+    case nearSelection
 }
 
 enum PopupFocusMode: String, CaseIterable {
