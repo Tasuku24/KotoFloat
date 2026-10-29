@@ -10,7 +10,10 @@ final class CaptureModel {
         case failed(CaptureFailure)
         case manual
     }
-    private(set) var state: State = .idle
+    private(set) var state: State = .idle {
+        didSet { onStateChange?(state) }
+    }
+    @ObservationIgnored var onStateChange: (@MainActor (State) -> Void)?
     var showsSample = true
     var manualText = ""
     @ObservationIgnored private var task: Task<Void, Never>?

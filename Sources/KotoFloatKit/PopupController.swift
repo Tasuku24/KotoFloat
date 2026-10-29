@@ -7,14 +7,17 @@ final class PopupController: NSObject, NSWindowDelegate {
     let preferences: PopupPreferences
     let sample = SampleContent()
     let capture = CaptureModel()
+    let translation: TranslationModel?
     private let captureEnvironment: any CaptureEnvironment
     var openSettings: (() -> Void)?
 
-    init(preferences: PopupPreferences, captureEnvironment: any CaptureEnvironment = SystemCaptureEnvironment()) {
+    init(preferences: PopupPreferences, captureEnvironment: any CaptureEnvironment = SystemCaptureEnvironment(), translation: TranslationModel? = nil) {
         self.preferences = preferences
         self.captureEnvironment = captureEnvironment
+        self.translation = translation
         panel = PopupWindowFactory.make(mode: preferences.focusMode)
         super.init()
+        translation?.bind(to: capture)
         configurePanel()
         NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
             name: NSApplication.didChangeScreenParametersNotification, object: nil)
@@ -22,7 +25,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     private func configurePanel() {
         panel.delegate = self
-        let hostingView = NSHostingView(rootView: PopupRootView(preferences: preferences, sample: sample, capture: capture,
+        let hostingView = NSHostingView(rootView: PopupRootView(preferences: preferences, sample: sample, capture: capture, translation: translation,
             toggleTopmost: { [weak self] in
                 guard let self else { return }
                 setAlwaysOnTop(!preferences.alwaysOnTop)
@@ -34,6 +37,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func showSample() {
         capture.cancel()
+        translation?.cancel(clear: true)
         capture.showsSample = true
         showPopup()
     }
@@ -61,6 +65,7 @@ final class PopupController: NSObject, NSWindowDelegate {
     }
 
     func captureSelectedText() {
+        guard capture.state != .capturing else { return }
         capture.start(using: SelectionCapture(environment: captureEnvironment)) { [weak self] in
             guard let self else { return }
             let bounds: CGRect?
@@ -117,6 +122,7 @@ final class PopupController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         preferences.savedFrame = panel.frame
         capture.cancel()
+        translation?.cancel()
     }
 
     @objc private func screensChanged(_ notification: Notification) { recoverVisibleFrame() }

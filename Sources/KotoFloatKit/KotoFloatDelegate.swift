@@ -7,11 +7,16 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     private var popupController: PopupController?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
+    private var connectionModel: ConnectionModel?
 
     public override init() { super.init() }
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        let controller = PopupController(preferences: PopupPreferences())
+        let translationPreferences = TranslationPreferences()
+        let credentials = KeychainCredentialStore()
+        let translation = TranslationModel(preferences: translationPreferences, credentials: credentials)
+        connectionModel = ConnectionModel(preferences: translationPreferences, credentials: credentials)
+        let controller = PopupController(preferences: PopupPreferences(), translation: translation)
         controller.openSettings = { [weak self] in self?.showSettings() }
         popupController = controller
         configureMenuBar()
@@ -39,13 +44,13 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     @objc private func showSample() { popupController?.showSample() }
 
     @objc private func showSettings() {
-        guard let popupController else { return }
+        guard let popupController, let connectionModel else { return }
         if settingsWindow == nil {
             let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.contentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = L10n.text("settings.title")
             window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: SettingsView(controller: popupController))
+            window.contentView = NSHostingView(rootView: SettingsView(controller: popupController, connection: connectionModel))
             window.center()
             settingsWindow = window
         }
