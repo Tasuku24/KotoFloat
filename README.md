@@ -8,13 +8,13 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 ### Development status
 
-Phases 1 and 2 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, and settings. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings.
+Phases 1–3 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, and OpenAI-compatible streaming translation. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Phase 3 has been checked against fixed API fixtures; a real LLM server is not yet verified.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
 
-Settings uses three tabs—**General**, **Popup**, and **Text capture**—without scrolling. Under **General → App language**, choose **Follow system** (the default), **English**, or **日本語**. The choice is saved and updates KotoFloat's screens and menus immediately; unsupported system languages fall back to English. System dialogs and some native controls still follow macOS. Under **Text capture**, **Check again** displays the check time and whether permission is enabled, even when the status has not changed.
+Settings uses five tabs—**General**, **Popup**, **Text capture**, **Connection**, and **Translation**—without a scrolling container. Under **General → App language**, choose **Follow system** (the default), **English**, or **日本語**. The choice is saved and updates KotoFloat's screens and menus immediately; unsupported system languages fall back to English. System dialogs and some native controls still follow macOS. Under **Text capture**, **Check again** displays the check time and whether permission is enabled, even when the status has not changed.
 
-This is a **local development preview that captures text**. LLM translation, glossaries, and the translation editor are planned in later phases. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md) and [Phase 2 verification](docs/testing/phase-2.md) for actual checks and limitations.
+This is a **local development preview**. Glossaries and the translation editor are planned in Phases 4 and 5. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), and [Phase 3 verification](docs/testing/phase-3.md) for actual checks and limitations.
 
 ### Build and run
 
@@ -34,7 +34,21 @@ xcodebuild -project KotoFloat.xcodeproj -scheme KotoFloat -configuration Debug -
 open .build/xcode/Build/Products/Debug/KotoFloat.app
 ```
 
-The app appears in the menu bar rather than the Dock. Settings opens on first launch. Enable KotoFloat in **System Settings → Privacy & Security → Device Control and Data Access** (called **Accessibility** on earlier macOS versions), select text in another app, and press **⌃⌥⌘T**. The original text and source app appear; translation is not connected yet. If direct access is unavailable, the app tries Copy and asks you to confirm the resulting text. **Enter or paste text…** works without Accessibility permission. **Show sample popup** remains available for layout testing. Drag the title bar to move it and its edges to resize it. **Try long text** demonstrates scrolling without automatic window resizing. Close the popup with its close button or focus it and press Escape; quit the app from the menu bar.
+The app appears in the menu bar rather than the Dock. Settings opens on first launch. Enable KotoFloat in **System Settings → Privacy & Security → Device Control and Data Access** (called **Accessibility** on earlier macOS versions), select text in another app, and press **⌃⌥⌘T**. The original text and source app appear. Configure and save a server in **Settings → Connection** to translate; otherwise the popup explains the missing setup. If direct access is unavailable, the app tries Copy and asks you to confirm the resulting text before sending it. **Enter or paste text…** works without Accessibility permission. **Show sample popup** remains available for layout testing and sends no requests. Drag the title bar to move it and its edges to resize it. Close the popup with its close button or focus it and press Escape; quit the app from the menu bar.
+
+### Translation setup and offline development
+
+In **Connection**, enter a base URL (for example, `http://127.0.0.1:1234/v1` for a server on this Mac), a model ID, and an optional API token. **Check connection** fetches the model list; it does not prove a model can generate. **Try translation** sends a disclosed fixed sentence using the current fields. **Save** applies the fields to selected-text translation and stores tokens in Keychain, scoped to that endpoint. Leaving the token blank preserves that endpoint's token; the remove option deletes it. A different endpoint does not inherit the old token.
+
+Translation defaults to automatic source detection and Japanese output. Choose English/Japanese in **Translation** or the popup. Changes apply to the next request; use **Retranslate** for existing text. **Stop** or closing the popup cancels the current request. Interrupted results remain labeled incomplete; the copy button is enabled only for complete output. No automatic retry or cloud fallback occurs.
+
+Without an LLM, run the background suite against a loopback-only fixed API server:
+
+```sh
+python3 scripts/test_with_mock_server.py
+```
+
+To use that fixture manually, run `python3 scripts/mock_llm_server.py`, set the base URL to `http://127.0.0.1:8765/v1`, and choose model `kotofloat-fixture`. It always returns text explicitly identified as a test response, never a real translation. The normal app has no automatic mock mode. Real model quality, remote HTTPS/VPN access, Keychain access in the signed app, and the new live UI still need acceptance checks.
 
 The commands above intentionally build and launch the app. Native window tests require a logged-in graphical macOS session and briefly show test windows; run them explicitly with `swift test --jobs 2` when desktop interaction is convenient. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
 
@@ -57,12 +71,12 @@ The first release includes all six phases. Final model selection and click-based
 
 ### Data handling principles
 
-- Phase 2 keeps captured text in memory on this Mac and makes no translation requests. It does not log or save source text.
+- Captured and translated text stays in memory; source text, output, and tokens are not logged or saved as history. Translation sends confirmed text only to the server configured by the user.
 - Copy fallback restores readable clipboard formats only if its observed generation is unchanged; newer updates, app switches, and input interrupt capture. See the verification record for the limits of cross-process clipboard restoration.
 - Known empty selections and protected password fields are not copied. Copied text must be confirmed before later translation features can use it.
-- Future translation input goes only to the endpoint configured by the user.
+- HTTPS certificates use system validation, and redirects are rejected. HTTP is allowed on loopback; other HTTP requires explicit opt-in. The app's transport setting permits custom HTTP endpoints, while application validation enforces this choice. Prefer HTTPS or a trusted VPN for remote access.
 - Keep credentials, personal glossaries, translation history, and model files out of Git.
-- Store future credentials in the macOS Keychain.
+- Credentials are stored in the macOS Keychain; only non-secret connection settings and language choices go into preferences.
 - Clearly distinguish implemented features from planned and unverified features.
 
 ### License
@@ -77,13 +91,13 @@ No license has been selected. This project does not currently grant an open-sour
 
 ### 開発状況
 
-第1・第2段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、設定画面、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。
+第1〜第3段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。第3段階は固定API応答で検証しており、実LLMサーバーは未確認です。
 
 AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → ポップアップ → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
-設定画面は **一般・ポップアップ・文章取得** の3つのタブに分かれ、スクロールせず操作できます。**一般 → アプリの言語** から **システムに従う**（初期設定）、**English**、**日本語** を選べます。選択は保存され、KotoFloatの画面とメニューにすぐ反映されます。システムの優先言語に対応言語がない場合は英語になります。システムのダイアログと一部の標準部品はmacOSの言語に従います。**文章取得** の **再確認** を押すと、状態が変わらない場合も、確認時刻と権限の有効・無効を表示します。
+設定画面は **一般・ポップアップ・文章取得・接続・翻訳** の5つのタブに分かれ、スクロールする領域を設けていません。**一般 → アプリの言語** から **システムに従う**（初期設定）、**English**、**日本語** を選べます。選択は保存され、KotoFloatの画面とメニューにすぐ反映されます。システムの優先言語に対応言語がない場合は英語になります。システムのダイアログと一部の標準部品はmacOSの言語に従います。**文章取得** の **再確認** を押すと、状態が変わらない場合も、確認時刻と権限の有効・無効を表示します。
 
-現在は **文章を取得するローカル開発用プレビュー** です。LLM翻訳、用語集、翻訳エディタは後続の段階で実装します。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階の検証記録](docs/testing/phase-1.md)と[第2段階の検証記録](docs/testing/phase-2.md)を参照してください。
+現在は **ローカル開発用プレビュー** です。用語集と翻訳エディタは第4・第5段階で実装します。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階の検証記録](docs/testing/phase-3.md)を参照してください。
 
 ### ビルドと起動
 
@@ -103,7 +117,21 @@ xcodebuild -project KotoFloat.xcodeproj -scheme KotoFloat -configuration Debug -
 open .build/xcode/Build/Products/Debug/KotoFloat.app
 ```
 
-Dockではなくメニューバーに表示されます。初回は設定画面が開きます。**システム設定 → Privacy & Security → Device Control and Data Access**（以前のmacOSでは **アクセシビリティ**）でKotoFloatを有効にし、別アプリで文章を選択して **⌃⌥⌘T** を押してください。原文と取得元アプリが表示されます。翻訳にはまだ接続していません。直接取得できない場合はコピーを試し、結果の確認を求めます。**文章を入力・貼り付け…** は権限なしでも使えます。画面確認用の **サンプルを表示** も残しています。タイトルバーで移動し、端のドラッグでサイズを変更できます。**長文を試す** では自動リサイズせずスクロールする動作を確認できます。閉じるボタン、またはポップアップにフォーカスした状態のEscで閉じます。アプリの終了はメニューバーから行います。
+Dockではなくメニューバーに表示されます。初回は設定画面が開きます。**システム設定 → Privacy & Security → Device Control and Data Access**（以前のmacOSでは **アクセシビリティ**）でKotoFloatを有効にし、別アプリで文章を選択して **⌃⌥⌘T** を押してください。原文と取得元アプリが表示されます。翻訳するには **設定 → 接続** でサーバーを設定・保存してください。未設定の場合はポップアップで案内します。直接取得できない場合はコピーを試し、利用者が結果を確認してから送信します。**文章を入力・貼り付け…** は権限なしでも使えます。画面確認用の **サンプルを表示** は通信しません。タイトルバーで移動し、端のドラッグでサイズを変更できます。閉じるボタン、またはポップアップにフォーカスした状態のEscで閉じます。アプリの終了はメニューバーから行います。
+
+### 翻訳の設定とLLMなしでの開発
+
+**接続** でベースURL（このMacで動かすサーバーなら例：`http://127.0.0.1:1234/v1`）、モデルID、任意のAPIトークンを入力します。**接続確認** はモデル一覧の取得までで、生成できることの確認ではありません。**試し翻訳** は入力中の値を使い、明示した固定文を送ります。**保存** で選択文章の翻訳に適用し、トークンは接続先ごとにキーチェーンへ保存します。トークンが空欄ならその接続先の保存済み値を維持し、削除の選択肢で消去できます。別の接続先へ以前のトークンを引き継ぎません。
+
+翻訳元は自動判定、翻訳先は日本語が初期設定です。**翻訳** またはポップアップで英語・日本語を選べます。変更は次の要求から反映し、現在の文章には **再翻訳** を使います。**停止** またはポップアップを閉じると要求をキャンセルします。中断した文章は未完了と表示し、コピーボタンは完了した訳文だけに使用できます。自動再試行やクラウドへの代替接続はありません。
+
+LLMがない場合は、ループバック専用の固定応答サーバーでバックグラウンド検証できます。
+
+```sh
+python3 scripts/test_with_mock_server.py
+```
+
+手動で試す場合は `python3 scripts/mock_llm_server.py` を起動し、ベースURLを `http://127.0.0.1:8765/v1`、モデルを `kotofloat-fixture` にします。常にテスト用と明示した固定文を返し、本物の翻訳は行いません。通常のアプリに、自動で固定応答へ切り替わる機能はありません。実モデルの品質、遠隔HTTPS／VPN接続、署名済みアプリからのキーチェーン利用、新しい実画面の確認は今後必要です。
 
 上記のコマンドは、意図的にアプリをビルドして起動する手順です。ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。画面を操作してよいタイミングで、明示的に `swift test --jobs 2` を実行してください。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
 
@@ -126,12 +154,12 @@ Dockではなくメニューバーに表示されます。初回は設定画面�
 
 ### データの取り扱い方針
 
-- 第2段階は取得文をこのMacのメモリ内に保持し、翻訳リクエストを行いません。原文をログやファイルへ保存しません。
+- 取得文・訳文はメモリ内で保持し、原文・訳文・トークンをログや履歴へ保存しません。翻訳時は、確定した文章だけを利用者が設定したサーバーへ送信します。
 - コピー経由の取得では、観測した世代が変わらない場合だけ読み取れた形式を復元します。新しい更新・アプリ切り替え・入力で処理を中断します。プロセス間の復元の制限は検証記録を参照してください。
 - 空選択と保護されたパスワード欄はコピーしません。コピー結果は利用者が確認してから後続の翻訳機能へ渡します。
-- 将来の翻訳対象は、利用者が指定した接続先だけへ送信します。
+- HTTPS証明書はシステムで検証し、リダイレクトは拒否します。HTTPはループバックで許可し、それ以外では明示的な有効化が必要です。アプリの通信設定では任意のHTTP接続先を扱えるようにし、アプリ内の検証でこの選択を適用します。遠隔接続にはHTTPSまたは信頼するVPNを推奨します。
 - 接続資格情報、個人の用語集、翻訳履歴、モデルファイルをGitへ登録しません。
-- 将来の資格情報はmacOSキーチェーンへ保存します。
+- 認証情報はmacOSキーチェーンに保存します。通常の設定には認証情報を含まない接続設定と言語の選択だけを保存します。
 - 実装済み・計画中・未検証を明確に区別します。
 
 ### ライセンス

@@ -2,6 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSAppTransportSecurity</key>
+    <dict>
+        <key>NSAllowsArbitraryLoads</key>
+        <true/>
+    </dict>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>KotoFloat connects to the translation server you configure on your local network. ローカルネットワーク上で指定した翻訳サーバーへ接続します。</string>
     <key>CFBundleLocalizations</key>
     <array>
         <string>en</string>

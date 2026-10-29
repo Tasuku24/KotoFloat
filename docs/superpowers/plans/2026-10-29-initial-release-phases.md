@@ -72,11 +72,13 @@ Implementation is ready. The app captured synthetic Chrome and Preview selection
 
 ### Phase 3: LLM connection and basic translation
 
-- [ ] Provide settings for the endpoint URL, model, and a token stored in Keychain.
-- [ ] Separate connection checks through GET /v1/models from trial translations through POST /v1/chat/completions.
-- [ ] Implement language settings, streaming, copying, retranslating, and cancellation.
-- [ ] Test malformed responses, authentication failures, unavailable models, timeouts, and interrupted streams using fixed responses.
-- [ ] Use request IDs to discard stale responses and prevent duplicate requests from repeated shortcuts. Do not present interrupted output as complete.
+Implementation and fixed-fixture checks are ready. Real LLM, signed-app Keychain, and desktop acceptance remain pending; see [Phase 3 verification](../../testing/phase-3.md).
+
+- [x] Provide settings for the endpoint URL, model, and a token stored in Keychain.
+- [x] Separate connection checks through GET /v1/models from trial translations through POST /v1/chat/completions.
+- [x] Implement language settings, streaming, copying, retranslating, and cancellation.
+- [x] Test malformed responses, authentication failures, unavailable models, timeouts, and interrupted streams using fixed responses.
+- [x] Use request IDs to discard stale responses and prevent duplicate requests from repeated shortcuts. Do not present interrupted output as complete.
 - [ ] When the endpoint is available, verify live integration with a provisional model. Verify remote access over HTTPS and a VPN on real devices.
 
 **Completion criteria:** Selection, translation, and copying work end to end. Final model selection is unnecessary, but an untested real server must remain explicitly unverified.
@@ -194,11 +196,13 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第3段階：LLM接続と基本翻訳
 
-- [ ] 接続先URL、モデル、Keychainに保存するトークンを設定できるようにする。
-- [ ] GET /v1/modelsによる接続確認と、POST /v1/chat/completionsによる試し翻訳を分ける。
-- [ ] 言語設定、ストリーミング、コピー、再翻訳、キャンセルを実装する。
-- [ ] 不正応答、認証失敗、モデル不在、タイムアウト、通信途中の切断を固定応答でテストする。
-- [ ] 要求IDで古い応答を排除し、連打による重複送信を防ぐ。中断結果を完成訳として扱わない。
+実装と固定応答での検証は完了しています。実LLM・署名済みアプリのKeychain・実画面の確認は保留です。[第3段階の検証記録](../../testing/phase-3.md)を参照してください。
+
+- [x] 接続先URL、モデル、Keychainに保存するトークンを設定できるようにする。
+- [x] GET /v1/modelsによる接続確認と、POST /v1/chat/completionsによる試し翻訳を分ける。
+- [x] 言語設定、ストリーミング、コピー、再翻訳、キャンセルを実装する。
+- [x] 不正応答、認証失敗、モデル不在、タイムアウト、通信途中の切断を固定応答でテストする。
+- [x] 要求IDで古い応答を排除し、連打による重複送信を防ぐ。中断結果を完成訳として扱わない。
 - [ ] 接続先が用意できたら仮モデルで実接続を確認する。外出先利用はHTTPSとVPN経由の実機確認を行う。
 
 **完了条件:** 選択→翻訳→コピーが通る。モデル最終選定は不要だが、実サーバー未確認ならその旨を残し、通信の実機検証完了とはしない。
