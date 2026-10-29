@@ -64,3 +64,4 @@
 "permission.request" = "Request access";
 "permission.openSettings" = "Open System Settings";
 "permission.refresh" = "Check again";
+"capture.error.appUnavailable" = "The source app is not responding or its text control is unavailable. Automatic Copy was skipped. Try again when the app responds, or paste text manually.";

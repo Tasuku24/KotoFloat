@@ -19,7 +19,7 @@ final class SystemCaptureEnvironment: CaptureEnvironment {
 
     func copySelection(from source: SourceApplication) async throws -> String {
         try await copyGate.run {
-            let session = SystemCopySession(source: source)
+            let session = try SystemCopySession(source: source)
             return try await ClipboardCapture(clipboard: SystemClipboard()).capture(session: session)
         }
     }
@@ -39,14 +39,17 @@ final class SystemCaptureEnvironment: CaptureEnvironment {
 private final class SystemCopySession: CopySession {
     private static let eventTag: Int64 = 0x4B6F746F466C6F61
     private let source: SourceApplication
-    private let focusedElement: AXUIElement?
+    private let focusedElement: AXUIElement
     private var monitor: Any?
     private var activationObserver: NSObjectProtocol?
     private(set) var interrupted = false
 
-    init(source: SourceApplication) {
+    init(source: SourceApplication) throws {
         self.source = source
-        focusedElement = AccessibilitySelectionReader.focusedElement(pid: source.processIdentifier)
+        guard let element = try AccessibilitySelectionReader.focusedElement(pid: source.processIdentifier) else {
+            throw CaptureFailure.appUnavailable
+        }
+        focusedElement = element
         monitor = NSEvent.addGlobalMonitorForEvents(matching: [.keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown, .scrollWheel]) { [weak self] event in
             MainActor.assumeIsolated {
                 if event.cgEvent?.getIntegerValueField(.eventSourceUserData) != Self.eventTag {
@@ -64,11 +67,8 @@ private final class SystemCopySession: CopySession {
 
     var sourceIsCurrent: Bool {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == source.processIdentifier else { return false }
-        if let focusedElement {
-            guard let current = AccessibilitySelectionReader.focusedElement(pid: source.processIdentifier) else { return false }
-            return CFEqual(focusedElement, current)
-        }
-        return true
+        guard let current = try? AccessibilitySelectionReader.focusedElement(pid: source.processIdentifier) else { return false }
+        return CFEqual(focusedElement, current)
     }
 
     var modifiersReleased: Bool {

@@ -20,11 +20,12 @@ enum SelectionRead: Equatable {
     case empty
     case protectedField
     case unavailable
+    case failed(CaptureFailure)
 }
 
 enum CaptureFailure: String, Error, Equatable {
     case permissionRequired, noSource, noSelection, protectedField, sourceChanged
-    case copyFailed, clipboardChanged, clipboardUnavailable, inputChanged, timedOut
+    case appUnavailable, copyFailed, clipboardChanged, clipboardUnavailable, inputChanged, timedOut
 }
 
 @MainActor
@@ -55,6 +56,7 @@ struct SelectionCapture {
             method = .accessibility
         case .empty: throw CaptureFailure.noSelection
         case .protectedField: throw CaptureFailure.protectedField
+        case .failed(let failure): throw failure
         case .unavailable:
             text = try await environment.copySelection(from: source)
             bounds = nil

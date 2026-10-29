@@ -53,6 +53,21 @@ struct ClipboardCaptureTests {
         #expect(session.finished)
     }
 
+    @Test func twoWritesBeforeFirstObservationPreserveNewerClipboard() async {
+        let board = board()
+        defer { board.releaseGlobally() }
+        write("original", to: board)
+        let session = CopySessionStub()
+        session.onSend = {
+            write("selection", to: board)
+            write("newer copy before first poll", to: board)
+            return true
+        }
+        let capture = ClipboardCapture(clipboard: SystemClipboard(board), wait: { _ in })
+        await #expect(throws: CaptureFailure.clipboardChanged) { try await capture.capture(session: session) }
+        #expect(board.string(forType: .string) == "newer copy before first poll")
+    }
+
     @Test func newerCopyDuringSettlingIsPreserved() async {
         let board = board()
         defer { board.releaseGlobally() }

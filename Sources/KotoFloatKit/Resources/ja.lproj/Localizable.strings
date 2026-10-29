@@ -64,3 +64,4 @@
 "permission.request" = "権限を要求";
 "permission.openSettings" = "システム設定を開く";
 "permission.refresh" = "再確認";
+"capture.error.appUnavailable" = "取得元のアプリが応答しないか、文章の入力欄にアクセスできません。自動コピーは行いませんでした。応答が戻ってから再試行するか、手動で貼り付けてください。";

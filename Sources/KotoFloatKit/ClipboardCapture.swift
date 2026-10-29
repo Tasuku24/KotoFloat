@@ -42,8 +42,9 @@ struct ClipboardCapture {
         guard session.sendCopy() else { throw CaptureFailure.copyFailed }
         for _ in 0..<40 {
             try check(session)
-            if clipboard.generation != original.generation {
-                let copiedGeneration = clipboard.generation
+            let copiedGeneration = clipboard.generation
+            if copiedGeneration != original.generation {
+                guard copiedGeneration == original.generation + 1 else { throw CaptureFailure.clipboardChanged }
                 let text = clipboard.text()
                 try await wait(.milliseconds(100))
                 try check(session)
