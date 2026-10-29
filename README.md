@@ -24,17 +24,19 @@ Requirements: macOS 15 or later, Xcode with the macOS SDK and a Swift 6 toolchai
 
 **VS Code:** open the repository folder and install the recommended Swift extension. `Package.swift` enables code navigation, diagnostics, and Swift package tests. Run **Tasks: Run Task → Run macOS app / macOSアプリを起動**, or press F5 to use the included LLDB launch configuration. Xcode must still be installed. The native app and package share the same implementation.
 
+For daily development, use **Test in background** or **Validate build in background** in VS Code's Tasks menu. These are the default test/build tasks. They run at lower process priority with two build jobs, do not launch the app, and do not focus the terminal. Build validation writes to `.build/validation`, leaving the app in `.build/xcode` untouched. Background tests exclude the native window suite and use isolated settings and clipboard storage. Choose **Test all (opens windows)** separately for desktop checks; full verification of focus and AutoRaise still needs a graphical session.
+
 From a terminal in the repository:
 
 ```sh
-swift test
+nice -n 10 swift test --jobs 2 --skip PopupControllerTests
 xcodebuild -project KotoFloat.xcodeproj -scheme KotoFloat -configuration Debug -derivedDataPath .build/xcode build
 open .build/xcode/Build/Products/Debug/KotoFloat.app
 ```
 
 The app appears in the menu bar rather than the Dock. Settings opens on first launch. Enable KotoFloat in **System Settings → Privacy & Security → Device Control and Data Access** (called **Accessibility** on earlier macOS versions), select text in another app, and press **⌃⌥⌘T**. The original text and source app appear; translation is not connected yet. If direct access is unavailable, the app tries Copy and asks you to confirm the resulting text. **Enter or paste text…** works without Accessibility permission. **Show sample popup** remains available for layout testing. Drag the title bar to move it and its edges to resize it. **Try long text** demonstrates scrolling without automatic window resizing. Close the popup with its close button or focus it and press Escape; quit the app from the menu bar.
 
-Native window tests require a logged-in graphical macOS session and briefly show test windows. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
+The commands above intentionally build and launch the app. Native window tests require a logged-in graphical macOS session and briefly show test windows; run them explicitly with `swift test --jobs 2` when desktop interaction is convenient. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
 
 ### Project structure
 
@@ -91,17 +93,19 @@ AutoRaiseを使わない方を想定した **標準** の動作が初期設定�
 
 **VS Code：** リポジトリフォルダを開き、推奨されるSwift拡張機能をインストールしてください。`Package.swift` により定義への移動、エラー表示、Swiftパッケージのテストが利用できます。**Tasks: Run Task → Run macOS app / macOSアプリを起動** を実行するか、F5で付属のLLDB設定からデバッグできます。Xcodeのインストールも必要です。アプリとパッケージは同じ実装を共有します。
 
+日常の開発では、VS CodeのTasksメニューにある **バックグラウンドでテスト** または **バックグラウンドでビルド確認** を使ってください。これらが既定のテスト・ビルドタスクです。処理の優先度を下げ、ビルドの並列処理を2つに制限し、アプリを起動せず、ターミナルへフォーカスを移しません。ビルド確認の保存先は `.build/validation` とし、`.build/xcode` のアプリは変更しません。バックグラウンドのテストはウィンドウを表示するテストを除外し、設定とクリップボードは独立した領域を使用します。画面の確認には別途 **全テスト（ウィンドウを表示）** を選んでください。フォーカスやAutoRaiseの完全な検証には実際の画面が必要です。
+
 リポジトリ内のターミナルからは次の操作で確認できます。
 
 ```sh
-swift test
+nice -n 10 swift test --jobs 2 --skip PopupControllerTests
 xcodebuild -project KotoFloat.xcodeproj -scheme KotoFloat -configuration Debug -derivedDataPath .build/xcode build
 open .build/xcode/Build/Products/Debug/KotoFloat.app
 ```
 
 Dockではなくメニューバーに表示されます。初回は設定画面が開きます。**システム設定 → Privacy & Security → Device Control and Data Access**（以前のmacOSでは **アクセシビリティ**）でKotoFloatを有効にし、別アプリで文章を選択して **⌃⌥⌘T** を押してください。原文と取得元アプリが表示されます。翻訳にはまだ接続していません。直接取得できない場合はコピーを試し、結果の確認を求めます。**文章を入力・貼り付け…** は権限なしでも使えます。画面確認用の **サンプルを表示** も残しています。タイトルバーで移動し、端のドラッグでサイズを変更できます。**長文を試す** では自動リサイズせずスクロールする動作を確認できます。閉じるボタン、またはポップアップにフォーカスした状態のEscで閉じます。アプリの終了はメニューバーから行います。
 
-ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
+上記のコマンドは、意図的にアプリをビルドして起動する手順です。ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。画面を操作してよいタイミングで、明示的に `swift test --jobs 2` を実行してください。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
 
 ### フォルダ構成
 

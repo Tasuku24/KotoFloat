@@ -2,12 +2,22 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Validate build in background / バックグラウンドでビルド確認",
+      "type": "process",
+      "command": "/usr/bin/nice",
+      "args": ["-n", "10", "xcodebuild", "-project", "KotoFloat.xcodeproj", "-scheme", "KotoFloat", "-configuration", "Debug", "-derivedDataPath", ".build/validation", "-jobs", "2", "build"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "build", "isDefault": true},
+      "presentation": {"reveal": "silent", "focus": false},
+      "problemMatcher": ["$swiftc"]
+    },
+    {
       "label": "Build macOS app / macOSアプリをビルド",
       "type": "process",
       "command": "xcodebuild",
       "args": ["-project", "KotoFloat.xcodeproj", "-scheme", "KotoFloat", "-configuration", "Debug", "-derivedDataPath", ".build/xcode", "build"],
       "options": {"cwd": "${workspaceFolder}"},
-      "group": {"kind": "build", "isDefault": true},
+      "group": "build",
       "problemMatcher": ["$swiftc"]
     },
     {
@@ -19,10 +29,20 @@
       "problemMatcher": []
     },
     {
-      "label": "Test Swift package / Swiftパッケージをテスト",
+      "label": "Test in background / バックグラウンドでテスト",
+      "type": "process",
+      "command": "/usr/bin/nice",
+      "args": ["-n", "10", "swift", "test", "--jobs", "2", "--skip", "PopupControllerTests"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "test", "isDefault": true},
+      "presentation": {"reveal": "silent", "focus": false},
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "Test all (opens windows) / 全テスト（ウィンドウを表示）",
       "type": "process",
       "command": "swift",
-      "args": ["test"],
+      "args": ["test", "--jobs", "2"],
       "options": {"cwd": "${workspaceFolder}"},
       "group": "test",
       "problemMatcher": ["$swiftc"]

@@ -35,6 +35,10 @@ The live app switched from Follow system to Japanese, English, and back to Follo
 
 The selected-text checks above used the earlier permitted build. Rebuilding for these settings changes invalidated its local permission; the updated app correctly reports that access is not enabled. Selected-text capture in this new binary needs the user to re-add it in the system permission pane. No permission was changed automatically.
 
+### Background development checks
+
+VS Code's default test task now runs `nice -n 10 swift test --jobs 2 --skip PopupControllerTests`: all 53 tests in the background subset passed. The 15 native-window tests remain in a separately labeled full-test task; the 68-test result above includes those earlier checks. Routine builds use lower priority, two build jobs, and `.build/validation` instead of overwriting the running `.build/xcode` app. The background Debug build passed, and the existing app executable's checksum was unchanged. No app launch, focus changes, or simulated input were used for these background checks. Background results alone do not verify visual layout, focus, or AutoRaise.
+
 ### Clipboard limits
 
 The app does not clear the clipboard before sending Copy. It snapshots all readable representations (up to 8 MB), waits for shortcut modifier release, requires exactly one new generation, and waits briefly for it to settle. Multiple generation changes before the first observation are rejected without restoration, even if an app intentionally writes in multiple stages. It restores only if that generation is still current and no other input or focus change was observed. If ownership is uncertain, the latest clipboard content is left in place, so a cancelled/failed capture can leave the copied selection on the clipboard.
@@ -91,6 +95,10 @@ This is a locally ad-hoc-signed development build, not a notarized release. Rebu
 実アプリで、再起動せずにシステムに従う→日本語→英語→システムに従うと切り替えました。開いている設定画面のタイトル・項目・アプリメニュー・サンプルポップアップの表示言語が変わり、ポップアップの文章・位置・サイズは維持されました。選択は保存され、初期設定はシステムに従うです。システムのダイアログや、KeyboardShortcutsのショートカット記録メッセージを含む一部の標準部品は、アプリ内の選択ではなくmacOSの言語に従います。確認後は起動中のアプリをシステムに従うへ戻しました。
 
 上記の選択文章取得は、以前の権限許可済みビルドで確認したものです。今回の設定変更による再ビルドでローカルの権限が無効になり、更新版でも権限が無効であることを正しく表示しています。このバイナリで選択文章を取得するには、利用者がシステムの権限画面へ再登録する必要があります。権限は自動で変更していません。
+
+### バックグラウンド開発の確認
+
+VS Codeの既定テストを `nice -n 10 swift test --jobs 2 --skip PopupControllerTests` に変更し、バックグラウンド用の53件すべてが成功しました。ウィンドウを表示する15件は、別名の全テスト用タスクに残しています。上記の68件の結果には、それ以前に行った画面のテストも含まれます。通常のビルドは優先度を下げて並列処理を2つとし、起動中の `.build/xcode` のアプリを上書きせず `.build/validation` を使用します。バックグラウンドのDebugビルドも成功し、既存のアプリ実行ファイルのチェックサムが変わらないことを確認しました。これらのバックグラウンド検証では、アプリ起動・フォーカス変更・入力の送出は行っていません。バックグラウンドの結果だけでは、見た目・フォーカス・AutoRaiseの確認にはなりません。
 
 ### クリップボードの制限
 
