@@ -25,3 +25,8 @@
 "settings.focusHint" = "The popup stays open when you switch apps. To close it, focus the popup and press Esc, or use its close button.";
 "state.on" = "On";
 "state.off" = "Off";
+"settings.focus" = "Focus";
+"settings.focusMode" = "Window behavior";
+"settings.standard" = "Standard (default)";
+"settings.autoRaise" = "AutoRaise compatibility";
+"settings.compatibilityHint" = "Choose compatibility mode if AutoRaise cannot move focus away from the popup. Showing the popup still preserves your current app's focus. Applies immediately.";

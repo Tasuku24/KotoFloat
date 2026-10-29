@@ -37,7 +37,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     @objc private func showSettings() {
         guard let popupController else { return }
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 500, height: 440),
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 500, height: 540),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = L10n.text("settings.title")
             window.isReleasedWhenClosed = false

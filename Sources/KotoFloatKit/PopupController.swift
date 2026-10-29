@@ -3,14 +3,21 @@ import SwiftUI
 
 @MainActor
 final class PopupController: NSObject, NSWindowDelegate {
-    let panel = PopupPanel()
+    private(set) var panel: NSWindow
     let preferences: PopupPreferences
     let sample = SampleContent()
     var openSettings: (() -> Void)?
 
     init(preferences: PopupPreferences) {
         self.preferences = preferences
+        panel = PopupWindowFactory.make(mode: preferences.focusMode)
         super.init()
+        configurePanel()
+        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
+    }
+
+    private func configurePanel() {
         panel.delegate = self
         let hostingView = NSHostingView(rootView: PopupContentView(preferences: preferences, sample: sample,
             toggleTopmost: { [weak self] in
@@ -20,8 +27,6 @@ final class PopupController: NSObject, NSWindowDelegate {
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         applyWindowLevel()
-        NotificationCenter.default.addObserver(self, selector: #selector(screensChanged),
-            name: NSApplication.didChangeScreenParametersNotification, object: nil)
     }
 
     func showSample() {
@@ -46,6 +51,24 @@ final class PopupController: NSObject, NSWindowDelegate {
     func setAlwaysOnTop(_ enabled: Bool) {
         preferences.alwaysOnTop = enabled
         applyWindowLevel()
+    }
+
+    func setFocusMode(_ mode: PopupFocusMode) {
+        guard mode != preferences.focusMode else { return }
+        let wasVisible = panel.isVisible
+        let frame = wasVisible ? panel.frame : preferences.savedFrame ?? panel.frame
+        preferences.focusMode = mode
+        // Recreate the native window; changing nonactivatingPanel on a live panel is unreliable.
+        // nonactivatingPanelを実行中に変更すると不整合が生じるため、ウィンドウを作り直す。
+        panel.delegate = nil
+        panel.close()
+        panel = PopupWindowFactory.make(mode: mode)
+        configurePanel()
+        panel.setFrame(frame, display: false)
+        if wasVisible {
+            panel.orderFrontRegardless()
+            preferences.savedFrame = panel.frame
+        }
     }
 
     func resetPosition() {

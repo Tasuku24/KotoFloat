@@ -4,7 +4,7 @@
 
 ### Scope and decisions
 
-Implement Phase 1 only, using fixed sample text. No selected-text capture, network requests, glossary storage, or translation editor yet. Target macOS 15+, Swift 6, SwiftUI content inside an AppKit nonactivating NSPanel. Keep the requested checkout at `/Users/s26037/Developer/KotoFloat` on `feature/phase-1-popup`.
+Implement Phase 1 only, using fixed sample text. No selected-text capture, network requests, glossary storage, or translation editor yet. Target macOS 15+, Swift 6, SwiftUI content inside an AppKit nonactivating NSPanel by default, with an opt-in standard NSWindow for AutoRaise compatibility. Keep the requested checkout at `/Users/s26037/Developer/KotoFloat` on `feature/phase-1-popup`.
 
 Use a root Swift package for VS Code completion, builds, and tests, plus a small Xcode app project that links the same package. Use KeyboardShortcuts for a user-configurable global shortcut. The menu bar provides sample, settings, and quit actions. The initial shortcut is Control–Option–Command–T; recording another shortcut and clearing it are supported.
 
@@ -26,7 +26,7 @@ Showing the popup must not activate the app or make it key. Clicking it may give
 
 ### Task 3: Review and acceptance evidence
 
-- [ ] Review the whole change with a fresh reviewer, fix important issues, and rerun affected checks.
+- [x] Review the whole change with a fresh reviewer, fix important issues, and rerun affected checks.
 - [x] Record automated evidence separately from manual AutoRaise/display checks. Never mark a manual check passed based on code inspection or a synthetic event.
 - [x] Launch the local app for review, update both languages of the phase roadmap and README, and commit the Phase 1 implementation.
 
@@ -38,7 +38,7 @@ Check that no global Escape listener or focus-loss dismissal exists, the shortcu
 
 ### 範囲と決定事項
 
-固定のサンプル文章で第1段階のみ実装する。選択文章の取得、通信、用語集の保存、翻訳エディタはまだ含めない。macOS 15以降、Swift 6、AppKitの非アクティブ化NSPanel内にSwiftUIを配置する。指定の `/Users/s26037/Developer/KotoFloat` を維持し、`feature/phase-1-popup` ブランチで作業する。
+固定のサンプル文章で第1段階のみ実装する。選択文章の取得、通信、用語集の保存、翻訳エディタはまだ含めない。macOS 15以降、Swift 6、標準ではAppKitの非アクティブ化NSPanel内にSwiftUIを配置し、AutoRaise互換モードでは通常のNSWindowを使う。指定の `/Users/s26037/Developer/KotoFloat` を維持し、`feature/phase-1-popup` ブランチで作業する。
 
 VS Codeの補完・ビルド・テスト用にルートのSwiftパッケージを作り、同じパッケージを使う小さなXcodeアプリプロジェクトを追加する。変更可能なグローバルショートカットにはKeyboardShortcutsを使用する。メニューバーにサンプル表示・設定・終了を用意する。初期ショートカットはControl–Option–Command–Tとし、変更・解除も可能にする。
 
@@ -60,7 +60,7 @@ VS Codeの補完・ビルド・テスト用にルートのSwiftパッケージ�
 
 ### タスク3：レビューと検証記録
 
-- [ ] 別のレビュアーで変更全体を確認し、重要な問題を修正して関連チェックを再実行する。
+- [x] 別のレビュアーで変更全体を確認し、重要な問題を修正して関連チェックを再実行する。
 - [x] 自動検証と手動のAutoRaise・画面確認を分けて記録する。コード確認や合成イベントだけで手動確認を合格扱いにしない。
 - [x] ローカルアプリを起動して確認できる状態にし、段階計画とREADMEの両言語を更新して第1段階の実装をコミットする。
 

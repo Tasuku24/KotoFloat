@@ -10,6 +10,8 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 Phase 1 is implemented: a menu bar app with a movable, resizable sample popup and settings. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings.
 
+**Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
+
 This is a **local development preview with fixed text**. Selected-text capture, LLM translation, glossaries, and the translation editor are planned in later phases. There is no notarized downloadable release yet. Real AutoRaise and physical multi-display acceptance are tracked separately in the [Phase 1 verification record](docs/testing/phase-1.md).
 
 ### Build and run
@@ -70,6 +72,8 @@ No license has been selected. This project does not currently grant an open-sour
 ### 開発状況
 
 第1段階を実装しました。移動・サイズ変更できるサンプルのポップアップ、設定画面、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。
+
+AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
 現在は **固定文章を表示するローカル開発用プレビュー** です。選択文章の取得、LLM翻訳、用語集、翻訳エディタは後続の段階で実装します。公証済みの配布版はまだありません。実際のAutoRaise操作と物理的な複数画面の確認は、[第1段階の検証記録](docs/testing/phase-1.md)で別途管理します。
 

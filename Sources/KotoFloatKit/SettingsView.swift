@@ -30,6 +30,16 @@ struct SettingsView: View {
                     Button(L10n.text("settings.resetPosition")) { controller.resetPosition() }
                 }
             }
+            Section(L10n.text("settings.focus")) {
+                Picker(L10n.text("settings.focusMode"), selection: Binding(
+                    get: { controller.preferences.focusMode },
+                    set: { controller.setFocusMode($0) })) {
+                    Text(L10n.text("settings.standard")).tag(PopupFocusMode.standard)
+                    Text(L10n.text("settings.autoRaise")).tag(PopupFocusMode.autoRaiseCompatible)
+                }
+                Text(L10n.text("settings.compatibilityHint"))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section {
                 Text(L10n.text("settings.focusHint"))
                 Text(L10n.text("sample.notice"))
@@ -38,7 +48,7 @@ struct SettingsView: View {
             .font(.callout)
         }
         .formStyle(.grouped)
-        .frame(width: 500, height: 440)
+        .frame(width: 500, height: 540)
     }
 }
 

@@ -25,3 +25,8 @@
 "settings.focusHint" = "別のアプリへ移っても表示を維持します。閉じるにはポップアップにフォーカスしてEscを押すか、閉じるボタンを使います。";
 "state.on" = "オン";
 "state.off" = "オフ";
+"settings.focus" = "フォーカス";
+"settings.focusMode" = "ウィンドウの動作";
+"settings.standard" = "標準（初期設定）";
+"settings.autoRaise" = "AutoRaise互換";
+"settings.compatibilityHint" = "AutoRaiseでポップアップから別の画面へ移れない場合は互換モードを選んでください。表示時は元アプリのフォーカスを維持します。変更はすぐに反映されます。";

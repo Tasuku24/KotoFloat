@@ -4,6 +4,52 @@ import Testing
 
 @Suite(.serialized) @MainActor
 struct PopupControllerTests {
+    @Test func compatibilityModeExposesStandardMainCapableWindow() throws {
+        try withController { controller in
+            controller.setFocusMode(.autoRaiseCompatible)
+            controller.showSample()
+            #expect(controller.panel.canBecomeMain)
+            #expect(controller.panel.accessibilitySubrole() == .standardWindow)
+        }
+    }
+
+    @Test func standardModeDoesNotBecomeMainWhenFocused() throws {
+        try withController { controller in
+            controller.showSample()
+            try focus(controller.panel)
+            #expect(!controller.panel.isMainWindow)
+        }
+    }
+
+    @Test func switchingModePreservesVisibleFrameAndSampleContent() throws {
+        try withController { controller in
+            controller.showSample()
+            controller.sample.isLong = true
+            let originalWindow = controller.panel
+            let frame = originalWindow.frame
+            controller.setFocusMode(.autoRaiseCompatible)
+            #expect(controller.panel !== originalWindow)
+            #expect(!originalWindow.isVisible)
+            #expect(controller.panel.isVisible)
+            #expect(controller.panel.frame == frame)
+            #expect(controller.sample.isLong)
+            controller.setFocusMode(.standard)
+            #expect(controller.panel.isVisible)
+            #expect(controller.panel.frame == frame)
+            #expect(controller.sample.isLong)
+        }
+    }
+
+    @Test func switchingModeDoesNotOpenHiddenPopupOrLoseSavedFrame() throws {
+        try withController { controller in
+            let frame = CGRect(x: 100, y: 100, width: 500, height: 400)
+            controller.preferences.savedFrame = frame
+            controller.setFocusMode(.autoRaiseCompatible)
+            #expect(!controller.panel.isVisible)
+            #expect(controller.preferences.savedFrame == frame)
+        }
+    }
+
     @Test func closingAndReleasingControllerReleasesItsPanel() async throws {
         _ = NSApplication.shared
         let suite = "KotoFloatLifetimeTests.\(UUID().uuidString)"
@@ -18,6 +64,8 @@ struct PopupControllerTests {
         try await Task.sleep(for: .milliseconds(150))
         #expect(releasedController == nil)
         #expect(panel == nil)
+        releasedController = nil
+        panel = nil
     }
 
     @Test func longTextDoesNotResizeOrMovePopup() async throws {
@@ -42,7 +90,7 @@ struct PopupControllerTests {
     @Test func escapeKeyEventClosesFocusedPanel() throws {
         try withController { controller in
             controller.showSample()
-            controller.panel.makeKey()
+            try focus(controller.panel)
             #expect(controller.panel.isKeyWindow)
             let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,
                 modifierFlags: [], timestamp: 0, windowNumber: controller.panel.windowNumber,
@@ -78,7 +126,7 @@ struct PopupControllerTests {
     @Test func focusLossKeepsPopupVisibleAndEscapeOnlyClosesKeyPopup() throws {
         try withController { controller in
             controller.showSample()
-            controller.panel.makeKey()
+            try focus(controller.panel)
             #expect(controller.panel.isKeyWindow)
             let other = NSPanel(contentRect: CGRect(x: 100, y: 100, width: 300, height: 200),
                                 styleMask: [.titled, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -90,7 +138,7 @@ struct PopupControllerTests {
             #expect(controller.panel.isVisible)
             controller.panel.cancelOperation(nil)
             #expect(controller.panel.isVisible)
-            controller.panel.makeKey()
+            try focus(controller.panel)
             #expect(controller.panel.isKeyWindow)
             controller.panel.cancelOperation(nil)
             #expect(!controller.panel.isVisible)
@@ -148,6 +196,11 @@ struct PopupControllerTests {
             defaults.removePersistentDomain(forName: suite)
         }
         try body(controller)
+    }
+
+    private func focus(_ window: NSWindow) throws {
+        window.makeKeyAndOrderFront(nil)
+        try #require(window.isKeyWindow)
     }
 
     private func findScrollView(in view: NSView) -> NSScrollView? {

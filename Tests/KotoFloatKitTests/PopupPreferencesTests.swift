@@ -12,10 +12,12 @@ struct PopupPreferencesTests {
         let preferences = PopupPreferences(defaults: defaults)
         preferences.alwaysOnTop = false
         preferences.placement = .nearPointer
+        preferences.focusMode = .autoRaiseCompatible
         preferences.savedFrame = CGRect(x: -700, y: 200, width: 500, height: 350)
         let restored = PopupPreferences(defaults: defaults)
         #expect(!restored.alwaysOnTop)
         #expect(restored.placement == .nearPointer)
+        #expect(restored.focusMode == .autoRaiseCompatible)
         #expect(restored.savedFrame == CGRect(x: -700, y: 200, width: 500, height: 350))
     }
 

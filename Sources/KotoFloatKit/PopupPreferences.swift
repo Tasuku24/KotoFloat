@@ -7,9 +7,17 @@ enum PopupPlacement: String, CaseIterable {
     case nearPointer
 }
 
+enum PopupFocusMode: String, CaseIterable {
+    case standard
+    case autoRaiseCompatible
+}
+
 @MainActor @Observable
 final class PopupPreferences {
     @ObservationIgnored private let defaults: UserDefaults
+    var focusMode: PopupFocusMode {
+        didSet { defaults.set(focusMode.rawValue, forKey: "popup.focusMode") }
+    }
     var alwaysOnTop: Bool {
         didSet { defaults.set(alwaysOnTop, forKey: "popup.alwaysOnTop") }
     }
@@ -35,6 +43,7 @@ final class PopupPreferences {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        focusMode = defaults.string(forKey: "popup.focusMode").flatMap(PopupFocusMode.init(rawValue:)) ?? .standard
         alwaysOnTop = defaults.object(forKey: "popup.alwaysOnTop") as? Bool ?? true
         placement = defaults.string(forKey: "popup.placement").flatMap(PopupPlacement.init(rawValue:))
             ?? .previousPosition
