@@ -36,7 +36,7 @@ struct ServerConfiguration: Equatable, Sendable {
     var chatURL: URL { baseURL.appendingPathComponent("chat/completions") }
 }
 
-enum TranslationLanguage: String, CaseIterable, Sendable { case automatic, english = "en", japanese = "ja" }
+enum TranslationLanguage: String, CaseIterable, Codable, Sendable { case automatic, english = "en", japanese = "ja" }
 enum TokenUpdate { case keep, replace(String), remove }
 
 @MainActor @Observable final class TranslationPreferences {
