@@ -38,7 +38,7 @@ The app appears in the menu bar rather than the Dock. Settings opens on first la
 
 ### Translation setup and offline development
 
-In **Connection**, enter a base URL (for example, `http://127.0.0.1:1234/v1` for a server on this Mac), a model ID, and an optional API token. **Check connection** fetches the model list; it does not prove a model can generate. **Try translation** sends a disclosed fixed sentence using the current fields. **Save** applies the fields to selected-text translation and stores tokens in Keychain, scoped to that endpoint. Leaving the token blank preserves that endpoint's token; the remove option deletes it. A different endpoint does not inherit the old token.
+In **Connection**, enter a base URL (for example, `http://127.0.0.1:1234/v1` for a server on this Mac), a model ID, and an optional API token. **Check connection** fetches the model list; it does not prove a model can generate. **Try translation** sends a disclosed fixed sentence using the current fields. **Save** applies the fields to selected-text translation and stores tokens in Keychain, scoped to that endpoint. Leaving the token blank preserves that endpoint's token; the remove option deletes it. Changing to a different endpoint clears unsaved token edits, the removal option, and HTTP approval; the old saved token is not transferred.
 
 Translation defaults to automatic source detection and Japanese output. Choose English/Japanese in **Translation** or the popup. Changes apply to the next request; use **Retranslate** for existing text. **Stop** or closing the popup cancels the current request. Interrupted results remain labeled incomplete; the copy button is enabled only for complete output. No automatic retry or cloud fallback occurs.
 
@@ -121,7 +121,7 @@ Dockではなくメニューバーに表示されます。初回は設定画面�
 
 ### 翻訳の設定とLLMなしでの開発
 
-**接続** でベースURL（このMacで動かすサーバーなら例：`http://127.0.0.1:1234/v1`）、モデルID、任意のAPIトークンを入力します。**接続確認** はモデル一覧の取得までで、生成できることの確認ではありません。**試し翻訳** は入力中の値を使い、明示した固定文を送ります。**保存** で選択文章の翻訳に適用し、トークンは接続先ごとにキーチェーンへ保存します。トークンが空欄ならその接続先の保存済み値を維持し、削除の選択肢で消去できます。別の接続先へ以前のトークンを引き継ぎません。
+**接続** でベースURL（このMacで動かすサーバーなら例：`http://127.0.0.1:1234/v1`）、モデルID、任意のAPIトークンを入力します。**接続確認** はモデル一覧の取得までで、生成できることの確認ではありません。**試し翻訳** は入力中の値を使い、明示した固定文を送ります。**保存** で選択文章の翻訳に適用し、トークンは接続先ごとにキーチェーンへ保存します。トークンが空欄ならその接続先の保存済み値を維持し、削除の選択肢で消去できます。別の接続先へ変更すると、未保存のトークン・削除指定・HTTP許可をリセットし、以前の保存済みトークンも引き継ぎません。
 
 翻訳元は自動判定、翻訳先は日本語が初期設定です。**翻訳** またはポップアップで英語・日本語を選べます。変更は次の要求から反映し、現在の文章には **再翻訳** を使います。**停止** またはポップアップを閉じると要求をキャンセルします。中断した文章は未完了と表示し、コピーボタンは完了した訳文だけに使用できます。自動再試行やクラウドへの代替接続はありません。
 

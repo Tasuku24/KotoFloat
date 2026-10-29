@@ -1,4 +1,5 @@
 import Foundation
+import LocalAuthentication
 import Security
 
 @MainActor protocol CredentialStore {
@@ -8,10 +9,12 @@ import Security
 
 @MainActor struct KeychainCredentialStore: CredentialStore {
     private func query(_ endpoint: String) -> [String: Any] {
-        [kSecClass as String: kSecClassGenericPassword,
+        let context = LAContext()
+        context.interactionNotAllowed = true
+        return [kSecClass as String: kSecClassGenericPassword,
          kSecAttrService as String: "com.tasuku24.KotoFloat.translation",
          kSecAttrAccount as String: endpoint,
-         kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail]
+         kSecUseAuthenticationContext as String: context]
     }
 
     func token(for endpoint: String) throws -> String? {

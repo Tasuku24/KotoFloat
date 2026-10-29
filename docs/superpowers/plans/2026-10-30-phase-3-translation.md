@@ -61,7 +61,7 @@
 - [x] Provide a loopback-only fixture server with fixed, clearly identified output and no source/token logging. Verify the real client against it using synthetic text.
 - [x] Run background tests, Debug/universal Release builds in `.build/validation`, signature checks, and localization consistency checks. Expected: all pass without desktop interaction.
 - [x] Record exactly what fixtures establish and what still needs a real LLM or desktop session. Update English then Japanese documentation.
-- [ ] Perform one independent whole-branch review, fix material findings with regression tests, and commit. Do not merge.
+- [x] Perform one independent whole-branch review, fix material findings with regression tests, and commit. Do not merge.
 
 ## 日本語
 

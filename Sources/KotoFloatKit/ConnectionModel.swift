@@ -4,7 +4,7 @@ import Observation
 @MainActor @Observable final class ConnectionModel {
     enum Status: Equatable { case idle, saved, checking, connected(Int), trialRunning, trialComplete, cancelled, failed(TranslationFailure) }
     let preferences: TranslationPreferences
-    var endpoint: String { didSet { edited() } }
+    var endpoint: String { didSet { endpointChanged(from: oldValue) } }
     var modelName: String { didSet { edited() } }
     var allowHTTP: Bool { didSet { edited() } }
     var tokenInput = "" { didSet { edited() } }
@@ -106,6 +106,16 @@ import Observation
         status = .idle
         availableModels = []
         trialOutput = ""
+    }
+    private func endpointChanged(from previous: String) {
+        let oldIdentity = try? ServerConfiguration(endpoint: previous, model: "", allowHTTP: true).baseURL
+        let newIdentity = try? ServerConfiguration(endpoint: endpoint, model: "", allowHTTP: true).baseURL
+        if oldIdentity != newIdentity {
+            tokenInput = ""
+            removeSavedToken = false
+            allowHTTP = false
+        }
+        edited()
     }
     private func receive(_ text: String, request id: UUID) {
         guard requestID == id, status == .trialRunning else { return }

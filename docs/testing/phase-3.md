@@ -10,12 +10,13 @@ Request IDs invalidate late callbacks after cancellation, replacement, manual en
 
 ### Background evidence (2026-10-30)
 
-- `python3 scripts/test_with_mock_server.py`: **79 tests pass**, including settings/credential contracts, streaming parsing, translation/connection state, and real loopback HTTP integration.
+- `python3 scripts/test_with_mock_server.py`: **82 tests pass**, including settings/credential contracts, streaming parsing, translation/connection state, and real loopback HTTP integration.
 - New settings, client, lifecycle, and connection-state tests failed before implementation and passed afterward. They use synthetic input, isolated preferences, named pasteboards, and an in-memory credential store; the login Keychain is not modified.
 - URLSession and parser tests cover fragmented UTF-8/SSE, request construction, model lists, malformed/interrupted output, authentication/model/rate-limit errors, and timeouts. Reasoning fields are ignored; completion requires a normal stop plus the terminal SSE marker.
 - The loopback server verifies the actual client, redirect rejection, interrupted/malformed streams, unavailable models, authentication failures, and confirmed manual input reaching a complete result. It returns a clearly labeled fixed test response, not a real translation.
 - Debug and universal Release (arm64/x86_64) builds passed in `.build/validation`; both local signatures verified and English/Japanese keys matched. The `.build/xcode` app executable's checksum did not change.
 - No app launch/restart, synthesized input, or focus changes were used. The 15 native-window tests were excluded; their earlier Phase 2 success is not a new Phase 3 result.
+- An independent whole-branch review found one important issue: an endpoint edit could carry an unsaved token, token-removal intent, and HTTP approval to another server. Regression tests reproduced it before the fix. Changing normalized endpoint identity now clears all three, while equivalent URL formatting preserves them. The full 82-test background suite passed afterward. No deferred minor findings remain.
 
 ### Transport and data boundaries
 
@@ -44,12 +45,13 @@ OpenAI互換のモデル一覧取得とChat Completionsのストリーミング�
 
 ### バックグラウンドでの検証（2026-10-30）
 
-- `python3 scripts/test_with_mock_server.py`：**79テスト成功**。設定・認証情報、ストリーム解析、翻訳・接続状態、実際のループバックHTTP通信を含みます。
+- `python3 scripts/test_with_mock_server.py`：**82テスト成功**。設定・認証情報、ストリーム解析、翻訳・接続状態、実際のループバックHTTP通信を含みます。
 - 新しい設定・クライアント・要求管理・接続状態のテストは、実装前に失敗、実装後に成功しました。合成文章、独立した設定・名前付きクリップボード、メモリ内の認証情報ストアを使い、ログインキーチェーンは変更していません。
 - URLSessionと解析のテストで、分割UTF-8/SSE、要求内容、モデル一覧、不正・中断応答、認証・モデル・要求過多のエラー、タイムアウトを確認しました。推論用フィールドは表示せず、正常な停止とSSE終端がそろってから完了とします。
 - ループバックのサーバーで、本体の通信処理、リダイレクト拒否、中断・不正応答、モデル不在、認証エラー、確定した手入力から訳文の完了までを確認しました。テスト用と明示した固定文を返すもので、本物の翻訳ではありません。
 - `.build/validation` でDebug・ユニバーサルRelease（arm64/x86_64）のビルドと両方のローカル署名検証が成功し、英日キーも一致しました。`.build/xcode` のアプリ実行ファイルのチェックサムは変わっていません。
 - アプリ起動・再起動、入力の送出、フォーカス変更は行っていません。ウィンドウを表示する15件は除外しました。以前の第2段階の成功は、第3段階の再確認にはなりません。
+- 独立した全体レビューで、接続先の編集時に入力途中のトークン・削除指定・HTTP許可を別サーバーへ持ち越す問題が1件見つかりました。修正前に回帰テストで再現し、正規化後の接続先が変わった場合は3つともリセットするよう修正。同じURLの表記変更では維持します。修正後は82件のバックグラウンドテストがすべて成功しました。保留した軽微なレビュー指摘はありません。
 
 ### 通信とデータの境界
 
