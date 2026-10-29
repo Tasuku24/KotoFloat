@@ -1,0 +1,13 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug KotoFloat / KotoFloatをデバッグ",
+      "type": "lldb-dap",
+      "request": "launch",
+      "program": "${workspaceFolder}/.build/xcode/Build/Products/Debug/KotoFloat.app/Contents/MacOS/KotoFloat",
+      "cwd": "${workspaceFolder}",
+      "preLaunchTask": "Build macOS app / macOSアプリをビルド"
+    }
+  ]
+}

@@ -50,9 +50,11 @@
 
 ### Phase 1: App foundation and popup
 
-- [ ] Set up the Xcode project, menu bar presence, settings, and a customizable shortcut.
-- [ ] Use fixed sample translations to implement movement, resizing, scrolling, and always-on-top behavior.
-- [ ] Implement focus and Esc rules, position and size persistence, and multiple-display handling.
+Implementation and automated checks are ready. Physical AutoRaise acceptance remains pending; see the [verification record](../../testing/phase-1.md).
+
+- [x] Set up the Xcode project, menu bar presence, settings, and a customizable shortcut.
+- [x] Use fixed sample translations to implement movement, resizing, scrolling, and always-on-top behavior.
+- [x] Implement focus and Esc rules, position and size persistence, and multiple-display handling.
 - [ ] Check moving between the source and popup using the actual AutoRaise configuration.
 
 **Completion criteria:** The popup works without translation, stays open across focus changes, and can be moved away from the source. Esc closes it only while the popup is active. No automatic movement or resizing occurs.
@@ -168,9 +170,11 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第1段階：アプリの土台とポップアップ
 
-- [ ] Xcodeプロジェクト、メニューバー常駐、設定画面、変更可能なショートカットを用意する。
-- [ ] 固定のサンプル訳文で移動・リサイズ・スクロール・最前面固定を実装する。
-- [ ] フォーカスとEscの条件、位置・サイズの保持、複数ディスプレイを扱う。
+実装と自動検証は完了しています。実際のAutoRaise操作の確認は保留です。[検証記録](../../testing/phase-1.md)を参照してください。
+
+- [x] Xcodeプロジェクト、メニューバー常駐、設定画面、変更可能なショートカットを用意する。
+- [x] 固定のサンプル訳文で移動・リサイズ・スクロール・最前面固定を実装する。
+- [x] フォーカスとEscの条件、位置・サイズの保持、複数ディスプレイを扱う。
 - [ ] AutoRaiseを使う実際の設定で、原文とポップアップを行き来する操作を確認する。
 
 **完了条件:** 翻訳機能なしでも操作でき、フォーカスが移っても消えず、原文を隠したら移動できる。Escはポップアップがアクティブなときだけ閉じる。自動移動・リサイズは発生しない。

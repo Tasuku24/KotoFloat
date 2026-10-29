@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build macOS app / macOSアプリをビルド",
+      "type": "process",
+      "command": "xcodebuild",
+      "args": ["-project", "KotoFloat.xcodeproj", "-scheme", "KotoFloat", "-configuration", "Debug", "-derivedDataPath", ".build/xcode", "build"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": {"kind": "build", "isDefault": true},
+      "problemMatcher": ["$swiftc"]
+    },
+    {
+      "label": "Run macOS app / macOSアプリを起動",
+      "type": "process",
+      "command": "open",
+      "args": ["${workspaceFolder}/.build/xcode/Build/Products/Debug/KotoFloat.app"],
+      "dependsOn": "Build macOS app / macOSアプリをビルド",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test Swift package / Swiftパッケージをテスト",
+      "type": "process",
+      "command": "swift",
+      "args": ["test"],
+      "options": {"cwd": "${workspaceFolder}"},
+      "group": "test",
+      "problemMatcher": ["$swiftc"]
+    }
+  ]
+}

@@ -28,3 +28,6 @@ xcuserdata/
 *.gguf
 *.safetensors
 *.log
+
+# Local execution notes / ローカル実行記録
+.superpowers/
