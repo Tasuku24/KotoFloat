@@ -16,6 +16,8 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         popupController = controller
         configureMenuBar()
         configureAppMenu()
+        NotificationCenter.default.addObserver(self, selector: #selector(languageChanged),
+            name: AppLocalization.didChange, object: AppLocalization.shared)
         KeyboardShortcuts.onKeyUp(for: .showSamplePopup) { [weak controller] in
             controller?.captureSelectedText()
         }
@@ -39,7 +41,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     @objc private func showSettings() {
         guard let popupController else { return }
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 540, height: 720),
+            let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.contentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.title = L10n.text("settings.title")
             window.isReleasedWhenClosed = false
@@ -52,7 +54,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func configureMenuBar() {
-        let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        let item = statusItem ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         item.button?.image = NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
         item.button?.toolTip = "KotoFloat"
         let menu = NSMenu()
@@ -85,6 +87,12 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate {
         editItem.submenu = editMenu
         mainMenu.addItem(editItem)
         NSApp.mainMenu = mainMenu
+    }
+
+    @objc private func languageChanged() {
+        settingsWindow?.title = L10n.text("settings.title")
+        configureMenuBar()
+        configureAppMenu()
     }
 
     private func actionItem(_ key: String, action: Selector, key equivalent: String = "") -> NSMenuItem {

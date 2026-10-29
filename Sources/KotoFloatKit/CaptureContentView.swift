@@ -8,13 +8,16 @@ struct PopupRootView: View {
     let openSettings: () -> Void
 
     var body: some View {
-        if capture.showsSample {
-            PopupContentView(preferences: preferences, sample: sample,
-                toggleTopmost: toggleTopmost, openSettings: openSettings)
-        } else {
-            CaptureContentView(model: capture, preferences: preferences,
-                toggleTopmost: toggleTopmost, openSettings: openSettings)
+        Group {
+            if capture.showsSample {
+                PopupContentView(preferences: preferences, sample: sample,
+                    toggleTopmost: toggleTopmost, openSettings: openSettings)
+            } else {
+                CaptureContentView(model: capture, preferences: preferences,
+                    toggleTopmost: toggleTopmost, openSettings: openSettings)
+            }
         }
+        .environment(\.locale, AppLocalization.shared.locale)
     }
 }
 
@@ -110,28 +113,4 @@ struct CaptureContentView: View {
                 .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
         }
     }
-}
-
-struct AccessibilityPermissionView: View {
-    @State private var isGranted = SystemCaptureEnvironment().isTrusted
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(L10n.text(isGranted ? "permission.granted" : "permission.required"),
-                systemImage: isGranted ? "checkmark.circle" : "lock")
-            Text(L10n.text("permission.hint")).font(.caption).foregroundStyle(.secondary)
-            HStack {
-                if !isGranted {
-                    Button(L10n.text("permission.request")) { SystemCaptureEnvironment.requestAccessibility(); refresh() }
-                }
-                Button(L10n.text("permission.openSettings")) { SystemCaptureEnvironment.openAccessibilitySettings() }
-                Button(L10n.text("permission.refresh")) { refresh() }
-            }
-            .controlSize(.small)
-        }
-        .onAppear { refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in refresh() }
-    }
-
-    private func refresh() { isGranted = SystemCaptureEnvironment().isTrusted }
 }
