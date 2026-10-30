@@ -48,7 +48,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     }
 
     public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard popupController?.translation?.hasUnsentWork == true else { return .terminateNow }
+        guard popupController?.translation?.hasUnsentWork == true || popupController?.capture.hasUnsentWork == true else { return .terminateNow }
         let alert = NSAlert()
         alert.messageText = L10n.text("editor.quitTitle")
         alert.informativeText = L10n.text("editor.quitMessage")

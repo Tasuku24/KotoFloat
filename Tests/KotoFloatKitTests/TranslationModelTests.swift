@@ -71,7 +71,7 @@ import Testing
         }
     }
 
-    @Test func copiedTextWaitsForConfirmationAndManualEntryCancelsTranslation() async throws {
+    @Test func copiedTextWaitsForConfirmationAndManualEntryPreservesTranslation() async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -85,10 +85,11 @@ import Testing
             capture.confirmCopy()
             await waitFor { await service.count == 1 }
             capture.beginManualEntry()
-            await service.emit("stale", at: 0)
+            #expect(model.state == .running)
+            await service.emit("Previous result", at: 0)
             await service.finish(at: 0)
-            #expect(model.output.isEmpty)
-            #expect(model.state == .cancelled)
+            await waitFor { model.state == .completed }
+            #expect(model.output == "Previous result")
             capture.manualText = "manual source"
             capture.acceptManualText()
             await waitFor { await service.count == 2 }

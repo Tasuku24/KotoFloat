@@ -196,6 +196,71 @@ import Testing
         }
     }
 
+    @Test(arguments: ["configuration", "credentials", "glossary"])
+    func preflightFailureKeepsSourceProtected(_ failure: String) throws {
+        try withTranslationDefaults { defaults in
+            let preferences = TranslationPreferences(defaults: defaults)
+            let credentials = MemoryCredentials()
+            if failure != "configuration" {
+                try preferences.save(try ServerConfiguration(endpoint: "https://fixture.invalid", model: "fixture"),
+                                     tokenUpdate: .keep, credentials: credentials)
+            }
+            credentials.shouldFail = failure == "credentials"
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("KotoFloatPreflight-\(UUID())")
+            defer { try? FileManager.default.removeItem(at: directory) }
+            var store: GlossaryStore?
+            if failure == "glossary" {
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let url = directory.appendingPathComponent("glossaries.json")
+                try Data("invalid".utf8).write(to: url)
+                store = GlossaryStore(url: url)
+            }
+            let model = TranslationModel(preferences: preferences, credentials: credentials, glossaries: store)
+            model.editSource("Original manual draft")
+            model.translateSource()
+            let expected: TranslationModel.State = failure == "configuration" ? .needsConfiguration :
+                .failed(failure == "credentials" ? .credentialsUnavailable : .glossaryUnavailable)
+            #expect(model.state == expected)
+            #expect(model.hasUnsentWork)
+            model.start(text: captured("New selection"))
+            #expect(model.sourceText == "Original manual draft")
+            #expect(model.pendingAction != nil)
+            model.keepEditing()
+            #expect(model.hasUnsentWork)
+        }
+    }
+
+    @Test func cancellingCaptureDoesNotCancelAnIndependentEditorRequest() async throws {
+        try await withEditor { model, service in
+            let capture = CaptureModel()
+            model.bind(to: capture)
+            model.start(text: captured("Source"))
+            await waitFor { await service.count == 1 }
+            capture.start(using: SelectionCapture(environment: CaptureEnvironmentStub()), completion: {})
+            #expect(capture.state == .capturing)
+            capture.cancel()
+            #expect(capture.state == .idle)
+            #expect(model.state == .running)
+            await service.emit("Still translating", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            #expect(model.resultText == "Still translating")
+        }
+    }
+
+    @Test func popupManualDraftRequiresQuitProtectionUntilAccepted() {
+        let capture = CaptureModel()
+        #expect(!capture.hasUnsentWork)
+        capture.beginManualEntry()
+        capture.manualText = "Unsubmitted manual draft"
+        #expect(capture.hasUnsentWork)
+        capture.cancel()
+        #expect(capture.hasUnsentWork)
+        capture.acceptManualText()
+        #expect(!capture.hasUnsentWork)
+        #expect(capture.state == .captured(captured("Unsubmitted manual draft")))
+    }
+
     private func captured(_ text: String) -> CapturedText {
         CapturedText(text: text, source: nil, bounds: nil, method: .manual)
     }

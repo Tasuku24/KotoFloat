@@ -60,7 +60,9 @@ import Observation
         guard let input else { return false }
         return input.source != preferences.sourceLanguage || input.target != preferences.targetLanguage
     }
-    var hasUnsentWork: Bool { hasEdits || sourceChanged }
+    var hasUnsentWork: Bool {
+        hasEdits || sourceChanged || (!sourceText.isEmpty && state != .completed && state != .running)
+    }
     var canTranslate: Bool {
         !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && sourceText.utf8.count <= 131_072
     }
@@ -234,11 +236,9 @@ import Observation
 
     func bind(to capture: CaptureModel) {
         capture.onStateChange = { [weak self] state in
-            switch state {
-            case .captured(let text): self?.start(text: text)
-            case .capturing: break
-            default: self?.cancel()
-            }
+            // Capture navigation/cancellation does not own the shared translation lifecycle.
+            // 取得画面の移動やキャンセルでは共有翻訳のライフサイクルを変更しない。
+            if case .captured(let text) = state { self?.start(text: text) }
         }
     }
 
