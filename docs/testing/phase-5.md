@@ -39,6 +39,28 @@ A read-only independent review found three important issues, all fixed with regr
 - A separate loopback endpoint required a disposable test token. The signed app was rejected without it, saved it to Keychain, connected with the input field cleared, connected again after restarting the same build, and was rejected again after removing the saved token. No existing endpoint credential was changed. Temporary preferences and glossary data were restored/removed after verification, and the temporary servers/model were stopped.
 - The final loopback-enabled background run passed **115 tests**. Logs are local ignored artifacts in `.build/phase5-acceptance/`; the verification build remains separate from `.build/xcode`.
 
+### SmolLM2 functional verification (2026-10-30)
+
+The user supplied a loaded `smollm2-135m-instruct`: `unsloth/SmolLM2-135M-Instruct-GGUF/SmolLM2-135M-Instruct-Q4_K_M.gguf`, 105,454,144 bytes, 2048-token context, and four available prediction slots. Requests were sent sequentially. The API server was initially stopped; it was started on `127.0.0.1:1234` for this check and stopped afterward. No other model was loaded. SmolLM2 was left loaded and idle, and KotoFloat's original preferences were restored.
+
+Two opt-in integration tests use the production URLSession client and shared model with isolated preferences, in-memory credentials, and a named pasteboard. They passed against SmolLM2 in 2.623 seconds total (a functional test duration, not an inference benchmark). They check model discovery, nonempty completed generation, request direction, manual capture, generated/edited separation, Undo/Redo, edited-result copying, Keep editing and confirmed retranslation, document/undo reset, swap without sending, clear confirmation, and cancellation after receiving an actual text chunk. They make no translation-quality assertions and are disabled in ordinary test runs. The subsequent `python3 scripts/test_with_mock_server.py` run also succeeded: 117 reported tests, including these two skipped local-model tests (115 executed).
+
+To repeat them with an already loaded local model and a running loopback server:
+
+```sh
+KOTOFLOAT_LOCAL_MODEL=smollm2-135m-instruct nice -n 10 swift test --jobs 2 --skip PopupControllerTests --filter LocalModelIntegrationTests
+```
+
+The validation app also passed connection checking, test-sentence generation, source editing, main-window generation, native Command–Z / Shift–Command–Z, original-output disclosure, Keep editing, confirmed retranslation, and edit preservation after opening and closing the manual-entry popup. Copy was checked on a named pasteboard by the integration test; this pass did not replace the user's general clipboard. The response completed before the settings Stop button could be clicked, so live button cancellation is not claimed for SmolLM2; actual-client cancellation passed above, and the earlier slow-fixture UI check remains separate evidence. No production source changed in this pass, so no additional app build was needed. Local evidence is in `.build/smollm2-acceptance/`.
+
+SmolLM2 responses mixed languages, echoed translation instructions, and introduced an unrequested `100mA` into the five-volts example. These are model-content failures, not successful translation-quality checks. The user deferred the following content checks to Qwen:
+
+- [ ] English → Japanese and Japanese → English meaning, naturalness, and correct target-language output; verify that five volts stays five volts without introducing a current value.
+- [ ] Return only the translation, without echoed instructions, source repetition, or unrelated explanations; preserve paragraph structure and numeric units.
+- [ ] Follow relevant glossary choices in context, including `voltage → 電位差`, and assess remaining missing-term warnings against the actual output. Application-side glossary matching/warnings already have independent evidence above.
+
+IME, VoiceOver, AutoRaise, visual/lifecycle coverage, and remote transport below are independent of the model; switching to Qwen alone will not verify them. The user confirmed that no remote server is currently available.
+
 ### Remaining acceptance boundaries
 
 - [ ] Actual Japanese IME candidate conversion/cancellation and caret/selection behavior throughout composition. This Mac had ABC selected and both input-source shortcuts disabled; the supported automation could not switch the input-source menu. Native marked-text insertion/commit passed separately.
@@ -88,6 +110,28 @@ Click-based alternative translations, speech, tone controls, document translatio
 - 検証用用語集で`voltage → 電位差`を指定しました。実モデルは`電圧`と訳しましたが、アプリは指定訳語の不足を警告し、`電位差`を含む編集訳に直すと警告が消えました。要求時の用語集と参照件数も一致しました。非遵守の検出を示すもので、モデルの用語遵守を保証しません。
 - 別のループバックAPIに検証専用トークンを要求させました。署名済みアプリでトークンなしの拒否、Keychain保存、入力欄を空にした接続、同じビルドの再起動後の接続、保存トークン削除後の拒否を確認しました。既存接続先の認証情報は変更していません。検証後は一時設定と用語集を復元／除去し、一時サーバーとモデルを停止しました。
 - 最終のループバック有効の背景検証は **115テスト成功**。ログは追跡対象外の`.build/phase5-acceptance/`に保存し、検証ビルドを`.build/xcode`から分離しています。
+
+### SmolLM2による機能検証（2026-10-30）
+
+利用者が読み込んだ`smollm2-135m-instruct`を使いました。ファイルは`unsloth/SmolLM2-135M-Instruct-GGUF/SmolLM2-135M-Instruct-Q4_K_M.gguf`、105,454,144バイト、コンテキスト2048トークン、同時生成枠4です。要求は順番に送りました。APIサーバーは開始時に停止していたため、検証中だけ`127.0.0.1:1234`で起動し、終了後に停止しました。別モデルは読み込んでいません。SmolLM2は読み込み済み・待機状態で残し、KotoFloatの設定は開始前へ復元しました。
+
+明示時だけ動く統合テスト2件で、本番のURLSessionクライアントと共有モデルを使い、設定・メモリ内認証情報・名前付きクリップボードを分離しました。SmolLM2で合計2.623秒で成功しました（機能テストの所要時間であり、推論のベンチマークではありません）。モデル一覧、空でない生成完了、要求方向、手入力の確定、生成訳と編集訳の区別、Undo/Redo、編集訳コピー、編集続行と確認付き再翻訳、文書とUndo履歴のリセット、送信しない入れ替え、クリア確認、実際の文字列受信後の中断を確認します。翻訳品質を判定せず、通常のテストでは無効です。その後の`python3 scripts/test_with_mock_server.py`も成功し、報告117件のうち今回のローカルモデル2件はスキップ、115件を実行しました。
+
+ローカルモデルを読み込み、ループバックサーバーを起動した状態で再実行します。
+
+```sh
+KOTOFLOAT_LOCAL_MODEL=smollm2-135m-instruct nice -n 10 swift test --jobs 2 --skip PopupControllerTests --filter LocalModelIntegrationTests
+```
+
+検証用アプリでも接続確認、試し翻訳、原文編集、メイン画面の生成、ネイティブのCommand–Z／Shift–Command–Z、生成訳の展開、編集続行、確認付き再翻訳、手入力ポップアップの開閉後の編集保持が成功しました。コピーは統合テストの名前付きクリップボードで確認し、今回は利用者の一般クリップボードを置き換えていません。設定画面の停止ボタンを押す前に生成が完了したため、SmolLM2での実ボタンによる停止は確認済みとしません。実クライアントの中断は上記のテストで成功し、以前の遅延固定応答によるUI確認とは分けて扱います。本番コードの変更はなく、アプリの追加ビルドは行っていません。ローカル証跡は`.build/smollm2-acceptance/`です。
+
+SmolLM2の応答には言語の混在、翻訳指示の繰り返し、5ボルトの例への不要な`100mA`の追加がありました。モデルの内容面の失敗として記録し、翻訳品質の成功とは扱いません。利用者の指示により、次の内容検証はQwenで後日行います。
+
+- [ ] 英語→日本語・日本語→英語の意味、自然さ、指定言語での出力。5ボルトが5ボルトのままで、電流値を追加しないこと。
+- [ ] 翻訳だけを返し、指示文・原文の繰り返しや無関係な説明を含めず、段落構造と数値・単位を保持すること。
+- [ ] `voltage → 電位差`などの関連用語を文脈に沿って使い、残る用語警告と実際の結果を照合すること。アプリ側の用語照合・警告には上記の独立した検証結果があります。
+
+以下のIME、VoiceOver、AutoRaise、表示・ライフサイクル、遠隔通信はモデルとは別の項目です。Qwenへ替えるだけでは確認できません。遠隔サーバーは現在ないことを利用者に確認済みです。
 
 ### 残る受け入れ条件
 
