@@ -1,0 +1,127 @@
+{
+  "date": "2026-10-30",
+  "applicationCommit": "d2d2f4de9f19e9baedfa9155415a241b5a5d69c4",
+  "model": {
+    "identifier": "qwen2.5-0.5b-instruct",
+    "path": "Qwen/Qwen2.5-0.5B-Instruct-GGUF/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+    "sizeBytes": 491400032,
+    "contextLength": 32768,
+    "parallel": 4
+  },
+  "temperature": 0.2,
+  "cases": [
+    {
+      "missingPreferredTranslations": [],
+      "output": "五伏流が、电阻の电压です。",
+      "sample": {
+        "glossary": [],
+        "id": "en-ja-basic",
+        "source": "en",
+        "target": "ja",
+        "text": "The voltage across the resistor is five volts."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "The voltage difference between the two ends of the reactor is 5 V.",
+      "sample": {
+        "glossary": [],
+        "id": "ja-en-basic",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器の両端の電位差は5 Vです。"
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "切断電源後、再接上电源後の电压は5Vで、电流は0.2Aです。",
+      "sample": {
+        "glossary": [],
+        "id": "en-ja-paragraphs",
+        "source": "en",
+        "target": "ja",
+        "text": "Disconnect the power before replacing the resistor.\n\nAfter reconnecting the power, the voltage is 5 V and the current is 0.2 A."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "Before replacing the valve, turn off the power. After turning it back on, the voltage is 5V and the current is 0.2A.",
+      "sample": {
+        "glossary": [],
+        "id": "ja-en-paragraphs",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器を交換する前に、電源を切ってください。\n\n電源を再接続した後、電圧は5 V、電流は0.2 Aです。"
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [
+        "電位差",
+        "抵抗器"
+      ],
+      "output": "5伏流抜きです。",
+      "sample": {
+        "glossary": [
+          {
+            "caseSensitive": false,
+            "context": "Electrical potential difference across a component.",
+            "enabled": true,
+            "preferredTranslation": "電位差",
+            "sourceLanguage": "en",
+            "sourceTerm": "voltage",
+            "targetLanguage": "ja"
+          },
+          {
+            "caseSensitive": false,
+            "context": "",
+            "enabled": true,
+            "preferredTranslation": "抵抗器",
+            "sourceLanguage": "en",
+            "sourceTerm": "resistor",
+            "targetLanguage": "ja"
+          }
+        ],
+        "id": "en-ja-glossary",
+        "source": "en",
+        "target": "ja",
+        "text": "The voltage across the resistor is five volts."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "The potential difference across the resistor is 5 V.",
+      "sample": {
+        "glossary": [
+          {
+            "caseSensitive": false,
+            "context": "Electrical potential difference across a component.",
+            "enabled": true,
+            "preferredTranslation": "potential difference",
+            "sourceLanguage": "ja",
+            "sourceTerm": "電位差",
+            "targetLanguage": "en"
+          },
+          {
+            "caseSensitive": false,
+            "context": "",
+            "enabled": true,
+            "preferredTranslation": "resistor",
+            "sourceLanguage": "ja",
+            "sourceTerm": "抵抗器",
+            "targetLanguage": "en"
+          }
+        ],
+        "id": "ja-en-glossary",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器の両端の電位差は5 Vです。"
+      },
+      "state": "completed"
+    }
+  ]
+}

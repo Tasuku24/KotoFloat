@@ -8,13 +8,13 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 ### Development status
 
-Phases 1–4 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, and local glossaries with CSV import/export. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Phase 3 has been checked against fixed API fixtures; a real LLM server is not yet verified.
+Phases 1–5 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, and a shared translation editor. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Fixed API fixtures and real local LM Studio English/Japanese smoke translations have been verified; remote HTTPS/VPN acceptance remains pending.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
 
 Settings uses five tabs—**General**, **Popup**, **Text capture**, **Connection**, and **Translation**—without a scrolling container. Under **General → App language**, choose **Follow system** (the default), **English**, or **日本語**. The choice is saved and updates KotoFloat's screens and menus immediately; unsupported system languages fall back to English. System dialogs and some native controls still follow macOS. Under **Text capture**, **Check again** displays the check time and whether permission is enabled, even when the status has not changed.
 
-This is a **local development preview**. Glossaries are implemented; the translation editor is planned in Phase 5. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), [Phase 3 verification](docs/testing/phase-3.md), and [Phase 4 verification](docs/testing/phase-4.md) for actual checks and limitations.
+This is a **local development preview**. Glossaries and the translation editor are implemented. Desktop editing, shared-window navigation, local-model translation, and Keychain persistence have been checked; actual IME/VoiceOver/AutoRaise and part of the visual acceptance matrix remain pending. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), [Phase 3 verification](docs/testing/phase-3.md), [Phase 4 verification](docs/testing/phase-4.md), and [Phase 5 verification](docs/testing/phase-5.md) for actual checks and limitations.
 
 ### Build and run
 
@@ -40,7 +40,7 @@ The app appears in the menu bar rather than the Dock. Settings opens on first la
 
 In **Connection**, enter a base URL (for example, `http://127.0.0.1:1234/v1` for a server on this Mac), a model ID, and an optional API token. **Check connection** fetches the model list; it does not prove a model can generate. **Try translation** sends a disclosed fixed sentence using the current fields. **Save** applies the fields to selected-text translation and stores tokens in Keychain, scoped to that endpoint. Leaving the token blank preserves that endpoint's token; the remove option deletes it. Changing to a different endpoint clears unsaved token edits, the removal option, and HTTP approval; the old saved token is not transferred.
 
-Translation defaults to automatic source detection and Japanese output. Choose English/Japanese in **Translation** or the popup. Changes apply to the next request; use **Retranslate** for existing text. **Stop** or closing the popup cancels the current request. Interrupted results remain labeled incomplete; the copy button is enabled only for complete output. No automatic retry or cloud fallback occurs.
+Translation defaults to automatic source detection and Japanese output. Choose English/Japanese in **Translation** or the popup. Changes apply to the next request; use **Retranslate** for existing text. **Stop** cancels the current request. Closing the popup cancels it when the editor is not visible; closing the editor cancels it when the popup is not visible. Both retain the draft. Interrupted results remain labeled incomplete; the copy button is enabled only for nonempty, complete output (including manual edits). No automatic retry or cloud fallback occurs.
 
 Without an LLM, run the background suite against a loopback-only fixed API server:
 
@@ -51,6 +51,16 @@ python3 scripts/test_with_mock_server.py
 To use that fixture manually, run `python3 scripts/mock_llm_server.py`, set the base URL to `http://127.0.0.1:8765/v1`, and choose model `kotofloat-fixture`. It always returns text explicitly identified as a test response, never a real translation. The normal app has no automatic mock mode. Real model quality, remote HTTPS/VPN access, Keychain access in the signed app, and the new live UI still need acceptance checks.
 
 The commands above intentionally build and launch the app. Native window tests require a logged-in graphical macOS session and briefly show test windows; run them explicitly with `swift test --jobs 2` when desktop interaction is convenient. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
+
+### Main translator and editing
+
+Choose **Open translator…** in the menu bar or popup. The resizable window shares the current source, request, translation, and edits with the popup; opening it never translates again. Enter or paste text on the left, select English/Japanese (or automatic source), and click **Translate**. Input, language, and glossary changes do not send requests automatically. Source input is limited to 128 KiB of UTF-8 per request; character counts are shown separately.
+
+Edit completed output on the right. **Original generated translation** reveals the unchanged model output after edits, while **Copy translation** copies your current edited wording. **Undo/Redo** and Command–Z / Shift–Command–Z operate within the current document. A new translation or confirmed clear/swap resets undo so old text cannot reappear in a new document. Editing the source stops active generation; existing output remains labeled with its original source/direction. Incomplete output stays read-only.
+
+Retranslating edited output, replacing an edited or untranslated draft with a new capture, **Clear**, and **Swap languages and text** show an in-app confirmation. **Keep editing** retains the current document. Further edits invalidate that confirmation. Swap requires an explicit source language and a completed result matching the current source/direction; it moves your edited translation to the source and waits for **Translate**. Automatic source asks the model to infer the language; it does not provide detected-language metadata for swapping.
+
+Closing a window preserves the shared draft in memory. Quitting warns about untranslated/failed source drafts, popup manual-entry drafts, or manual translation edits; copy important text before quitting. No translation history is saved. The popup offers source expansion, the active glossary, the request's glossary snapshot, and explicit retranslation reminders. The workflow takes basic text controls as a reference from [DeepL](https://support.deepl.com/hc/en-us/articles/9851524013468-Get-started-DeepL-for-Microsoft-Word); it uses only your configured LLM server. Alternative-word suggestions, file translation, speech, tone controls, and saved history are outside Phase 5.
 
 ### Glossaries
 
@@ -110,13 +120,13 @@ No license has been selected. This project does not currently grant an open-sour
 
 ### 開発状況
 
-第1〜第4段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。第3段階は固定API応答で検証しており、実LLMサーバーは未確認です。
+第1〜第5段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。固定API応答とローカルの実LM Studioによる英日翻訳の疎通を確認済みで、遠隔HTTPS／VPNは未確認です。
 
 AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → ポップアップ → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
 設定画面は **一般・ポップアップ・文章取得・接続・翻訳** の5つのタブに分かれ、スクロールする領域を設けていません。**一般 → アプリの言語** から **システムに従う**（初期設定）、**English**、**日本語** を選べます。選択は保存され、KotoFloatの画面とメニューにすぐ反映されます。システムの優先言語に対応言語がない場合は英語になります。システムのダイアログと一部の標準部品はmacOSの言語に従います。**文章取得** の **再確認** を押すと、状態が変わらない場合も、確認時刻と権限の有効・無効を表示します。
 
-現在は **ローカル開発用プレビュー** です。用語集は実装済みで、翻訳エディタは第5段階で実装します。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階](docs/testing/phase-3.md)・[第4段階の検証記録](docs/testing/phase-4.md)を参照してください。
+現在は **ローカル開発用プレビュー** です。用語集と翻訳エディタは実装済みです。実画面の編集、共有画面間の移動、ローカル実モデル、Keychainの永続化を確認しました。実IME／VoiceOver／AutoRaiseと一部の視覚的な受け入れ条件は未確認です。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階](docs/testing/phase-3.md)・[第4段階](docs/testing/phase-4.md)・[第5段階の検証記録](docs/testing/phase-5.md)を参照してください。
 
 ### ビルドと起動
 
@@ -142,7 +152,7 @@ Dockではなくメニューバーに表示されます。初回は設定画面�
 
 **接続** でベースURL（このMacで動かすサーバーなら例：`http://127.0.0.1:1234/v1`）、モデルID、任意のAPIトークンを入力します。**接続確認** はモデル一覧の取得までで、生成できることの確認ではありません。**試し翻訳** は入力中の値を使い、明示した固定文を送ります。**保存** で選択文章の翻訳に適用し、トークンは接続先ごとにキーチェーンへ保存します。トークンが空欄ならその接続先の保存済み値を維持し、削除の選択肢で消去できます。別の接続先へ変更すると、未保存のトークン・削除指定・HTTP許可をリセットし、以前の保存済みトークンも引き継ぎません。
 
-翻訳元は自動判定、翻訳先は日本語が初期設定です。**翻訳** またはポップアップで英語・日本語を選べます。変更は次の要求から反映し、現在の文章には **再翻訳** を使います。**停止** またはポップアップを閉じると要求をキャンセルします。中断した文章は未完了と表示し、コピーボタンは完了した訳文だけに使用できます。自動再試行やクラウドへの代替接続はありません。
+翻訳元は自動判定、翻訳先は日本語が初期設定です。**翻訳** またはポップアップで英語・日本語を選べます。変更は次の要求から反映し、現在の文章には **再翻訳** を使います。**停止** で要求をキャンセルします。ポップアップを閉じた場合はエディタが非表示のとき、エディタを閉じた場合はポップアップが非表示のときにキャンセルし、どちらも下書きは保持します。中断した文章は未完了と表示し、コピーボタンは空でない完成訳（手編集した内容を含む）だけに使用できます。自動再試行やクラウドへの代替接続はありません。
 
 LLMがない場合は、ループバック専用の固定応答サーバーでバックグラウンド検証できます。
 
@@ -153,6 +163,16 @@ python3 scripts/test_with_mock_server.py
 手動で試す場合は `python3 scripts/mock_llm_server.py` を起動し、ベースURLを `http://127.0.0.1:8765/v1`、モデルを `kotofloat-fixture` にします。常にテスト用と明示した固定文を返し、本物の翻訳は行いません。通常のアプリに、自動で固定応答へ切り替わる機能はありません。実モデルの品質、遠隔HTTPS／VPN接続、署名済みアプリからのキーチェーン利用、新しい実画面の確認は今後必要です。
 
 上記のコマンドは、意図的にアプリをビルドして起動する手順です。ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。画面を操作してよいタイミングで、明示的に `swift test --jobs 2` を実行してください。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
+
+### メイン翻訳画面と編集
+
+メニューバーまたはポップアップの **翻訳画面を開く…** を選びます。サイズ変更可能な画面が原文・要求・訳文・編集内容をポップアップと共有し、開くだけでは再翻訳しません。左側に入力・貼り付けし、英日（翻訳元は自動も可）を選んで **翻訳** を押します。原文・言語・用語集の変更だけでは送信しません。送信原文はUTF-8で128 KiBまでで、文字数は別に表示します。
+
+右側の完成訳を直接編集できます。編集後の **生成された元の訳文** で元の出力を確認でき、**訳文をコピー** は現在の編集内容をコピーします。**取り消す／やり直す** とCommand–Z／Shift–Command–Zは現在の文書内で働きます。新しい翻訳、確認後のクリア／入れ替えでUndo履歴を消し、古い文章が新しい文書へ戻ることを防ぎます。生成中の原文編集は要求を停止し、既存結果には要求時の原文・方向を表示します。未完了の出力は編集できません。
+
+編集訳の再翻訳、編集済み／未翻訳の下書きを新取得文で置換、**クリア**、**言語と文章を入れ替える** ではアプリ内で確認します。**編集を続ける** で保持し、確認待ち中にさらに編集すると確認を無効化します。入れ替えには翻訳元の明示選択と現在の原文・方向に一致する完成訳が必要です。編集訳を原文へ移し、**翻訳** の操作を待ちます。翻訳元の自動はモデルに推定を指示しますが、入れ替えに使う判定言語情報は返しません。
+
+画面を閉じても共有下書きはメモリに残ります。未翻訳／失敗した原文、ポップアップの未確定手入力、編集訳を残してアプリを終了する場合は確認します。重要な文章は終了前にコピーしてください。翻訳履歴は保存しません。ポップアップには原文の展開、有効な用語集、要求時の用語集、再翻訳の案内を表示します。[DeepL](https://support.deepl.com/hc/en-us/articles/9851524013468-Get-started-DeepL-for-Microsoft-Word)の基本的な文章操作を参考にしていますが、接続先は設定したLLMサーバーだけです。単語の代替候補、文書翻訳、音声、文体指定、履歴保存は第5段階の範囲外です。
 
 ### 用語集
 

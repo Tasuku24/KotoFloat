@@ -100,10 +100,12 @@ Implementation and background/loopback checks are ready; real-model adherence an
 
 ### Phase 5: Main translation window and editing
 
-- [ ] Provide source input, the generated translation, an editable translation, copying, and undo.
-- [ ] Transfer the same translation state from the popup to the main window.
-- [ ] Track edits and revision numbers so retranslating does not silently discard changes.
-- [ ] Complete source expansion, active glossary display, and explicit retranslation after changing a language or glossary in the popup.
+Implementation, 115 background/loopback tests, and 17 native tests pass. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise, remote HTTPS/VPN, and the remaining visual/lifecycle matrix still need acceptance; see [Phase 5 verification](../../testing/phase-5.md).
+
+- [x] Provide source input, the generated translation, an editable translation, copying, and undo.
+- [x] Transfer the same translation state from the popup to the main window.
+- [x] Track edits and revision numbers so retranslating does not silently discard changes.
+- [x] Complete source expansion, active glossary display, and explicit retranslation after changing a language or glossary in the popup.
 
 **Completion criteria:** Users can edit without regenerating, and navigation or delayed responses cannot corrupt edits. Click-based alternative translations are not implemented yet.
 
@@ -228,10 +230,12 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第5段階：メイン翻訳画面と編集
 
-- [ ] 原文入力、生成訳、編集可能な訳文、コピー、取り消しを用意する。
-- [ ] ポップアップから同じ翻訳状態をメイン画面へ引き継ぐ。
-- [ ] 手動編集の有無と版番号を管理し、再翻訳で変更を黙って失わない動作を用意する。
-- [ ] ポップアップでの原文展開、使用中の用語集表示、言語・用語集変更後の明示的な再翻訳を整える。
+実装、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、遠隔HTTPS／VPN、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
+
+- [x] 原文入力、生成訳、編集可能な訳文、コピー、取り消しを用意する。
+- [x] ポップアップから同じ翻訳状態をメイン画面へ引き継ぐ。
+- [x] 手動編集の有無と版番号を管理し、再翻訳で変更を黙って失わない動作を用意する。
+- [x] ポップアップでの原文展開、使用中の用語集表示、言語・用語集変更後の明示的な再翻訳を整える。
 
 **完了条件:** 再生成なしで訳文を編集でき、画面移動や遅延応答で編集内容が壊れない。単語クリックによる別訳候補はまだ実装しない。
 

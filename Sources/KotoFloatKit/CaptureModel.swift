@@ -16,6 +16,7 @@ final class CaptureModel {
     @ObservationIgnored var onStateChange: (@MainActor (State) -> Void)?
     var showsSample = true
     var manualText = ""
+    var hasUnsentWork: Bool { !manualText.isEmpty }
     @ObservationIgnored private var task: Task<Void, Never>?
     @ObservationIgnored private var requestID = UUID()
 
