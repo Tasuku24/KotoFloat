@@ -23,9 +23,32 @@ struct TranslationDirectionView: View {
 struct TranslationContentView: View {
     let model: TranslationModel
     let openSettings: () -> Void
+    var openGlossaries: () -> Void = {}
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TranslationDirectionView(preferences: model.preferences).controlSize(.small)
+            if let store = model.glossaries {
+                GlossarySelectionView(store: store).controlSize(.small)
+                Button(L10n.text("menu.glossaries"), action: openGlossaries).controlSize(.small)
+                if model.glossaryChanged {
+                    Text(L10n.text("glossary.changed")).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if let context = model.input?.glossary, let name = context.name {
+                Text(String(format: L10n.text("glossary.used"), name, context.entries.count))
+                    .font(.caption).foregroundStyle(.secondary)
+                if !context.entries.isEmpty {
+                    DisclosureGroup(L10n.text("glossary.matched")) { termList(context.entries) }
+                }
+                if !context.conflicts.isEmpty {
+                    DisclosureGroup(L10n.text("glossary.conflicts")) { termList(context.conflicts) }
+                        .foregroundStyle(.orange)
+                }
+            }
+            if !model.missingGlossaryTerms.isEmpty {
+                DisclosureGroup(L10n.text("glossary.missing")) { termList(model.missingGlossaryTerms) }
+                    .foregroundStyle(.orange)
+            }
             if model.state == .running {
                 ProgressView(L10n.text("translation.working")).controlSize(.small)
             } else {
@@ -40,6 +63,15 @@ struct TranslationContentView: View {
                     .accessibilityIdentifier("translationOutput")
             }
         }
+    }
+
+    private func termList(_ entries: [GlossaryEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(entries) { entry in
+                Text("\(entry.sourceTerm) → \(entry.preferredTranslation)").textSelection(.enabled)
+                if !entry.context.isEmpty { Text(entry.context).foregroundStyle(.secondary) }
+            }
+        }.font(.caption).frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var statusText: String {

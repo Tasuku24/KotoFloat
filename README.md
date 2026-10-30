@@ -8,13 +8,13 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 ### Development status
 
-Phases 1–3 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, and OpenAI-compatible streaming translation. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Phase 3 has been checked against fixed API fixtures; a real LLM server is not yet verified.
+Phases 1–4 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, and local glossaries with CSV import/export. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Phase 3 has been checked against fixed API fixtures; a real LLM server is not yet verified.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
 
 Settings uses five tabs—**General**, **Popup**, **Text capture**, **Connection**, and **Translation**—without a scrolling container. Under **General → App language**, choose **Follow system** (the default), **English**, or **日本語**. The choice is saved and updates KotoFloat's screens and menus immediately; unsupported system languages fall back to English. System dialogs and some native controls still follow macOS. Under **Text capture**, **Check again** displays the check time and whether permission is enabled, even when the status has not changed.
 
-This is a **local development preview**. Glossaries and the translation editor are planned in Phases 4 and 5. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), and [Phase 3 verification](docs/testing/phase-3.md) for actual checks and limitations.
+This is a **local development preview**. Glossaries are implemented; the translation editor is planned in Phase 5. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), [Phase 3 verification](docs/testing/phase-3.md), and [Phase 4 verification](docs/testing/phase-4.md) for actual checks and limitations.
 
 ### Build and run
 
@@ -51,6 +51,25 @@ python3 scripts/test_with_mock_server.py
 To use that fixture manually, run `python3 scripts/mock_llm_server.py`, set the base URL to `http://127.0.0.1:8765/v1`, and choose model `kotofloat-fixture`. It always returns text explicitly identified as a test response, never a real translation. The normal app has no automatic mock mode. Real model quality, remote HTTPS/VPN access, Keychain access in the signed app, and the new live UI still need acceptance checks.
 
 The commands above intentionally build and launch the app. Native window tests require a logged-in graphical macOS session and briefly show test windows; run them explicitly with `swift test --jobs 2` when desktop interaction is convenient. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
+
+### Glossaries
+
+Open **Glossaries…** from the menu bar or translation popup. Create a glossary, add or edit entries, and choose it under **Glossary for translation**. Choose **None** to disable glossary references. The manager supports search, renaming, and confirmed deletion; the existing five Settings tabs stay the same.
+
+Each entry has a source term, preferred translation, English/Japanese direction, context notes, case sensitivity, and an enabled flag. Latin terms use word boundaries; Japanese terms can match within a sentence. With automatic source language, matching uses the text and target direction. Only matching enabled entries are sent. Conflicting preferred translations are shown and excluded from the reference data. After completion, preferred terms missing from the output are flagged for review; wording is never forcibly replaced, and real models may ignore preferences.
+
+Selections and edits affect the next request. The current result retains the glossary snapshot used for that request; use **Retranslate** to apply changes. **Try translation** in Connection continues to use only its fixed sample, without a glossary.
+
+**Import CSV…** previews every record and offers **Skip duplicates**, **Replace duplicates**, or **Keep both**. Replacement uses the last imported row for a matching source/direction/case key; exact duplicates are not added by Keep both. Any invalid record blocks the entire import. **Export CSV…** exports the selected glossary, including disabled entries, and an empty glossary exports a header template. The UTF-8 format (optional BOM) uses this header; quoted fields support commas, quotes, and line breaks:
+
+```csv
+source,target,source_language,target_language,context,case_sensitive,enabled
+voltage,電圧,en,ja,Electrical circuit,false,true
+```
+
+Languages must be different `en`/`ja` values; flags are `true`/`false`. CSV preserves literal text; spreadsheet applications may interpret formula-like values, so use a text import mode when opening untrusted CSV. The version-1 library lives at `~/Library/Application Support/KotoFloat/glossaries.json`. Writes are atomic, and invalid/unknown-version or externally changed data is not overwritten. **Reload saved data** refreshes after restoring a valid file or resolving another instance's changes. Close an edit or import preview before reloading; save failures retain its draft. Copy the JSON file for a complete backup (IDs, all glossaries, and active selection); CSV contains one glossary's entries only.
+
+Limits are 100 glossaries, 10,000 total entries, 16 MiB per library/CSV, and 120/256/1,024/2,048 characters for names/source terms/translations/context. A translation request permits at most 100 matching entries and 64 KiB of reference JSON; exceeding this stops the request and explains how to reduce it. Actual window/file-panel accessibility and real-model adherence remain unverified. See [Phase 4 verification](docs/testing/phase-4.md).
 
 ### Project structure
 
@@ -91,13 +110,13 @@ No license has been selected. This project does not currently grant an open-sour
 
 ### 開発状況
 
-第1〜第3段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。第3段階は固定API応答で検証しており、実LLMサーバーは未確認です。
+第1〜第4段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。第3段階は固定API応答で検証しており、実LLMサーバーは未確認です。
 
 AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → ポップアップ → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
 設定画面は **一般・ポップアップ・文章取得・接続・翻訳** の5つのタブに分かれ、スクロールする領域を設けていません。**一般 → アプリの言語** から **システムに従う**（初期設定）、**English**、**日本語** を選べます。選択は保存され、KotoFloatの画面とメニューにすぐ反映されます。システムの優先言語に対応言語がない場合は英語になります。システムのダイアログと一部の標準部品はmacOSの言語に従います。**文章取得** の **再確認** を押すと、状態が変わらない場合も、確認時刻と権限の有効・無効を表示します。
 
-現在は **ローカル開発用プレビュー** です。用語集と翻訳エディタは第4・第5段階で実装します。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階の検証記録](docs/testing/phase-3.md)を参照してください。
+現在は **ローカル開発用プレビュー** です。用語集は実装済みで、翻訳エディタは第5段階で実装します。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階](docs/testing/phase-3.md)・[第4段階の検証記録](docs/testing/phase-4.md)を参照してください。
 
 ### ビルドと起動
 
@@ -134,6 +153,20 @@ python3 scripts/test_with_mock_server.py
 手動で試す場合は `python3 scripts/mock_llm_server.py` を起動し、ベースURLを `http://127.0.0.1:8765/v1`、モデルを `kotofloat-fixture` にします。常にテスト用と明示した固定文を返し、本物の翻訳は行いません。通常のアプリに、自動で固定応答へ切り替わる機能はありません。実モデルの品質、遠隔HTTPS／VPN接続、署名済みアプリからのキーチェーン利用、新しい実画面の確認は今後必要です。
 
 上記のコマンドは、意図的にアプリをビルドして起動する手順です。ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。画面を操作してよいタイミングで、明示的に `swift test --jobs 2` を実行してください。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
+
+### 用語集
+
+メニューバーまたは翻訳ポップアップの **用語集…** を開きます。用語集を作成して項目を登録・編集し、**翻訳に使う用語集** で選択してください。**なし** を選ぶと参照を無効にします。管理画面は検索、名前変更、確認付き削除に対応します。設定画面は既存の5タブのままです。
+
+項目には原語、指定訳語、英日方向、文脈の補足、大文字小文字の区別、有効状態を保存します。欧文は単語境界を考慮し、日本語は文中の部分文字列と照合します。翻訳元が自動の場合は原文との一致と翻訳先を使います。一致する有効項目だけを送信し、競合する訳語は表示して参照データから除外します。完成訳に指定訳語が見当たらない場合は要確認と表示します。訳文を強制置換せず、実モデルの用語遵守は保証しません。
+
+選択・編集は次の要求から反映します。現在の結果には要求時の用語集を保持し、変更は **再翻訳** で適用します。接続画面の **試し翻訳** は引き続き固定文だけを使い、用語集を付けません。
+
+**CSVを取り込む…** は全レコードをプレビューし、**重複をスキップ・重複を置換・両方保持** を選べます。原語・言語方向・大文字小文字設定が同じ項目の置換は最後の行を採用し、両方保持でも完全一致は追加しません。不正な行があれば全体を取り込みません。**CSVを書き出す…** は無効な項目も含めた選択中の用語集を書き出します。空の用語集からはヘッダーテンプレートを書き出せます。UTF-8（BOM可）で、列は英語セクションの例を使います。引用符で囲めばカンマ・引用符・改行を保持できます。
+
+言語は異なる`en`／`ja`、真偽値は`true`／`false`です。CSVは文字列をそのまま保持するため、表計算アプリで出所不明のCSVを開く際は数式として評価しないテキスト取り込みを使ってください。形式バージョン1の保存先は`~/Library/Application Support/KotoFloat/glossaries.json`です。原子的に保存し、不正・未知バージョン・外部で更新されたデータを上書きしません。有効なファイルを復元した後や別インスタンスの変更を反映する際は **保存済みデータを再読込** を使います。編集や取り込みの確認画面は閉じてから再読込してください。保存失敗時は下書きを維持します。全用語集・ID・有効選択を含むバックアップにはJSONファイルをコピーしてください。CSVは1つの用語集の項目だけを含みます。
+
+上限は用語集100個、全項目10,000件、保存ファイル／CSV 16 MiB、名前120・原語256・訳語1,024・文脈2,048文字です。1要求では一致項目100件・参照JSON 64 KiBまでとし、超過時は送信を止めて削減方法を案内します。実画面・ファイルパネルの操作性とアクセシビリティ、実モデルでの適用は未確認です。[第4段階の検証記録](docs/testing/phase-4.md)を参照してください。
 
 ### フォルダ構成
 

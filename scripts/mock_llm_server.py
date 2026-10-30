@@ -46,8 +46,16 @@ class Handler(BaseHTTPRequestHandler):
             if not 0 < length <= 262144:
                 raise ValueError()
             body = json.loads(self.rfile.read(length))
-            if body.get("stream") is not True or [m.get("role") for m in body["messages"]] != ["system", "user"]:
+            roles = [m.get("role") for m in body["messages"]]
+            if body.get("stream") is not True or roles not in (["system", "user"], ["system", "user", "user"]):
                 raise ValueError()
+            if self.path.startswith("/glossary/"):
+                if roles != ["system", "user", "user"] or body["messages"][-1]["content"] != "voltage fixture":
+                    raise ValueError()
+                reference = json.loads(body["messages"][1]["content"])
+                if reference != [{"source": "voltage", "preferred_translation": "電圧", "source_language": "en",
+                                  "target_language": "ja", "context": "Electrical test fixture", "case_sensitive": False}]:
+                    raise ValueError()
         except (ValueError, KeyError, TypeError, AttributeError):
             self.respond(400, b'{"error":{"code":"invalid_request"}}')
             return
@@ -66,7 +74,8 @@ class Handler(BaseHTTPRequestHandler):
             return ("data: " + json.dumps({"id": "fixture", "object": "chat.completion.chunk", "model": MODEL,
                 "choices": [{"index": 0, "delta": delta, "finish_reason": finish}]}, ensure_ascii=False) + "\n\n").encode()
 
-        chunks = [event(OUTPUT[:8]), event(OUTPUT[8:])]
+        output = "テスト応答：電圧。実際の翻訳ではありません。" if self.path.startswith("/glossary/") else OUTPUT
+        chunks = [event(output[:8]), event(output[8:])]
         if not self.path.startswith("/broken/"):
             chunks += [event(finish="stop"), b'data: [DONE]\n\n']
         self.send_response(200)

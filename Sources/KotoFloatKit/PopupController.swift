@@ -10,6 +10,7 @@ final class PopupController: NSObject, NSWindowDelegate {
     let translation: TranslationModel?
     private let captureEnvironment: any CaptureEnvironment
     var openSettings: (() -> Void)?
+    var openGlossaries: (() -> Void)?
 
     init(preferences: PopupPreferences, captureEnvironment: any CaptureEnvironment = SystemCaptureEnvironment(), translation: TranslationModel? = nil) {
         self.preferences = preferences
@@ -29,7 +30,7 @@ final class PopupController: NSObject, NSWindowDelegate {
             toggleTopmost: { [weak self] in
                 guard let self else { return }
                 setAlwaysOnTop(!preferences.alwaysOnTop)
-            }, openSettings: { [weak self] in self?.openSettings?() }))
+            }, openSettings: { [weak self] in self?.openSettings?() }, openGlossaries: { [weak self] in self?.openGlossaries?() }))
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         applyWindowLevel()

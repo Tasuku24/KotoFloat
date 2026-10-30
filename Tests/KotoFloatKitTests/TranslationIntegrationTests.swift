@@ -41,6 +41,32 @@ struct TranslationIntegrationTests {
         }
     }
 
+    @Test @MainActor func savedGlossaryReachesLoopbackAsRelevantReferenceData() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("KotoFloatGlossaryHTTP-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("glossaries.json")
+        let store = GlossaryStore(url: url)
+        let id = try store.create(name: "Synthetic glossary")
+        var entry = glossaryEntry("voltage", "電圧")
+        entry.context = "Electrical test fixture"
+        try store.saveEntry(entry, in: id)
+        try store.saveEntry(glossaryEntry("unused", "MUST NOT SEND"), in: id)
+        try store.select(id)
+        try await withTranslationContext { preferences, credentials in
+            try preferences.save(try configuration(scenario: "glossary"), tokenUpdate: .keep, credentials: credentials)
+            let model = TranslationModel(preferences: preferences, credentials: credentials, glossaries: GlossaryStore(url: url))
+            let capture = CaptureModel()
+            model.bind(to: capture)
+            capture.beginManualEntry()
+            capture.manualText = "voltage fixture"
+            capture.acceptManualText()
+            await waitFor { model.state == .completed || { if case .failed = model.state { return true }; return false }() }
+            #expect(model.state == .completed)
+            #expect(model.output == "テスト応答：電圧。実際の翻訳ではありません。")
+            #expect(model.missingGlossaryTerms.isEmpty)
+        }
+    }
+
     private func configuration(scenario: String = "") throws -> ServerConfiguration {
         let endpoint = try #require(ProcessInfo.processInfo.environment["KOTOFLOAT_TEST_BASE_URL"])
         var parts = try #require(URLComponents(string: endpoint))

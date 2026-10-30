@@ -5,6 +5,7 @@ enum TranslationFailure: String, Error, Equatable {
     case invalidEndpoint, insecureConnection, credentialsUnavailable, invalidToken, modelRequired
     case authentication, modelUnavailable, rateLimited, serverUnavailable, requestRejected
     case malformedResponse, interrupted, timedOut, network, outputTooLarge, emptyResponse, truncated
+    case glossaryTooLarge, glossaryUnavailable
 }
 
 struct ServerConfiguration: Equatable, Sendable {
@@ -36,7 +37,7 @@ struct ServerConfiguration: Equatable, Sendable {
     var chatURL: URL { baseURL.appendingPathComponent("chat/completions") }
 }
 
-enum TranslationLanguage: String, CaseIterable, Sendable { case automatic, english = "en", japanese = "ja" }
+enum TranslationLanguage: String, CaseIterable, Codable, Sendable { case automatic, english = "en", japanese = "ja" }
 enum TokenUpdate { case keep, replace(String), remove }
 
 @MainActor @Observable final class TranslationPreferences {

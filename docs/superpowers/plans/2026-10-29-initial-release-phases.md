@@ -10,7 +10,7 @@
 
 **Architecture:** Combine SwiftUI screens with AppKit window management and text capture. The popup and main window share translation state; glossary and networking logic remain separate from the UI.
 
-**Tech Stack:** Swift 6, SwiftUI, AppKit, URLSession, SwiftData, Keychain, and Swift Package Manager. KeyboardShortcuts is the proposed shortcut library. LM Studio's OpenAI-compatible API is the first integration target.
+**Tech Stack:** Swift 6, SwiftUI, AppKit, URLSession, versioned JSON glossary storage, Keychain, and Swift Package Manager. KeyboardShortcuts is the proposed shortcut library. LM Studio's OpenAI-compatible API is the first integration target.
 
 **Spec:** The requirements summary in this document and the design discussion in the project chat. This is a phased roadmap; file-level implementation steps, types, and detailed tests will be defined before starting each phase.
 
@@ -85,12 +85,16 @@ Implementation and fixed-fixture checks are ready. Real LLM, signed-app Keychain
 
 ### Phase 4: Glossary integration
 
-- [ ] Implement glossary and entry creation, editing, searching, deletion, and glossary selection.
-- [ ] Store source terms, preferred translations, language direction, context notes, case handling, and enabled state.
-- [ ] Implement CSV import preview, validation, duplicate handling, and export.
-- [ ] Extract relevant terms for translation requests and flag conflicts or missing preferred translations for review.
-- [ ] Test partial-word matches, Japanese text, duplicate entries, quoted or multiline CSV fields, invalid rows, and save failures.
-- [ ] Verify restoration after restart and a versioned storage schema.
+Implementation and background/loopback checks are ready; real-model adherence and actual glossary-window/file-panel acceptance remain pending. See [Phase 4 verification](../../testing/phase-4.md).
+
+- [x] Implement glossary and entry creation, editing, searching, deletion, and glossary selection.
+- [x] Store source terms, preferred translations, language direction, context notes, case handling, and enabled state.
+- [x] Implement CSV import preview, validation, duplicate handling, and export.
+- [x] Extract relevant terms for translation requests and flag conflicts or missing preferred translations for review.
+- [x] Test partial-word matches, Japanese text, duplicate entries, quoted or multiline CSV fields, invalid rows, and save failures.
+- [x] Verify restoration after restart and a versioned storage schema.
+
+- [ ] Verify glossary adherence with a real model and the glossary window/import/export on the desktop.
 
 **Completion criteria:** Glossaries persist and are included in translation requests. Check adherence with a real model, without promising perfect compliance or applying unconditional string replacements.
 
@@ -209,12 +213,16 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第4段階：用語集を翻訳へ組み込む
 
-- [ ] 用語集と項目の登録・編集・検索・削除・切り替えを実装する。
-- [ ] 原語、訳語、言語方向、文脈の補足、大文字小文字の扱い、有効状態を保存する。
-- [ ] CSV取り込みのプレビュー・検証・重複処理と、書き出しを実装する。
-- [ ] 関連用語を抽出して翻訳へ渡し、競合と指定訳語が見当たらない結果を要確認として示す。
-- [ ] 単語の部分一致、日本語、重複項目、引用符や改行を含むCSV、不正行、保存失敗をテストする。
-- [ ] 再起動後の復元と、バージョンを持つ保存形式を確認する。
+実装とバックグラウンド・ループバック検証は完了しています。実モデルの用語遵守と用語集画面・ファイルパネルの実操作は未確認です。[第4段階の検証記録](../../testing/phase-4.md)を参照してください。
+
+- [x] 用語集と項目の登録・編集・検索・削除・切り替えを実装する。
+- [x] 原語、訳語、言語方向、文脈の補足、大文字小文字の扱い、有効状態を保存する。
+- [x] CSV取り込みのプレビュー・検証・重複処理と、書き出しを実装する。
+- [x] 関連用語を抽出して翻訳へ渡し、競合と指定訳語が見当たらない結果を要確認として示す。
+- [x] 単語の部分一致、日本語、重複項目、引用符や改行を含むCSV、不正行、保存失敗をテストする。
+- [x] 再起動後の復元と、バージョンを持つ保存形式を確認する。
+
+- [ ] 実モデルでの用語適用、用語集画面・取り込み・書き出しの実操作を確認する。
 
 **完了条件:** 用語集が永続化され、翻訳要求へ反映される。用語の適用は実モデルでも確認するが、必ず従うという保証や無条件の文字列置換は行わない。
 
