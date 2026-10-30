@@ -25,11 +25,23 @@ At the user's request, this behavior is now opt-in: Standard remains the default
 
 Both Debug and universal Release (arm64/x86_64) builds pass. The app now declares English and Japanese in `CFBundleLocalizations`. A runtime localization probe using the built app's Info.plist and resource bundles resolves `Sample` to `サンプル` and `AutoRaise compatibility` to `AutoRaise互換` with Japanese preferred. An independent review identified this packaging issue; it was fixed and verified. No other critical, important, or minor findings were reported in that review.
 
+### Focused recheck (2026-10-31)
+
+Rechecked the Phase 1 foundation against current revision `9863dce`, which includes the later translation and editor work. This does not replace the historical Phase 1 results above or establish full desktop acceptance.
+
+- `nice -n 10 swift test --jobs 2 --filter 'PopupGeometryTests|PopupPreferencesTests|AppLocalizationTests'`: **21 tests passed**. This covers placement, offscreen recovery, invalid settings, persistence across preference instances, and actual English/Japanese resource lookup; some cases were added after Phase 1.
+- `nice -n 10 swift test --jobs 2 --filter 'PopupControllerTests/(compatibilityMode|standardMode|switchingMode|closingAndReleasing|longText|escapeKeyEvent|showingPreserves|focusLoss|closeButton|changingTopmost|recoversOffscreen)'`: **12 native-window tests passed**. Test windows were briefly shown with isolated preferences. They verified focus retention, key-only Escape, close/reopen, topmost changes, mode switching, long-content scrollability/frame stability, offscreen recovery, and window lifetime. Later capture/editor tests were outside this focused run.
+- The low-priority Debug build with two jobs succeeded in `.build/validation`, and `codesign --verify --deep --strict` passed. The built bundle has `LSUIElement = true`, macOS 15.0 as its minimum version, both declared localizations, the shortcut recorder resources, and **228 matching English/Japanese localization keys**.
+- VS Code's task/launch files parse successfully, Swift extension **2.18.0** is installed, and Xcode's `lldb-dap` executable is available. These are prerequisite checks, not an actual F5 launch.
+- Two displays were detected. No physical display disconnect/reconnect, Spaces/fullscreen transition, pointer-driven AutoRaise workflow, or shortcut-recorder interaction was performed. The test runner dispatched Escape directly to its own window; this does not prove keyboard routing in another application. Product code and user settings were not changed, and KotoFloat itself was not launched or restarted.
+
+The focused run passed **33 tests in total**. Logs are in `.build/phase1-verification-20261031/` (ignored by Git). The manual items below remain open; the earlier general report of normal operation does not identify which individual acceptance cases were exercised.
+
 ### Manual acceptance checklist
 
-Use the built app, with the normal AutoRaise configuration left enabled. Do not infer these outcomes from automated tests.
+Use the built app, with the normal AutoRaise configuration left enabled. Do not infer these outcomes from automated tests. In the current app, use **Show sample popup** for fixed-text layout checks; the global shortcut now captures selected text and can translate it using the saved connection.
 
-- [ ] With another app focused, press ⌃⌥⌘T. The sample appears and typing still goes to the original app.
+- [ ] With text selected in another app, press ⌃⌥⌘T. The popup appears and typing still goes to the original app.
 - [ ] Move the pointer to the original app and let AutoRaise change focus. The popup remains visible.
 - [ ] Press Escape in the original app. Its normal Escape action works and the popup stays open.
 - [ ] Focus the popup, then press Escape. Only the popup closes. Reopen with the shortcut.
@@ -67,11 +79,23 @@ Final user acceptance of the AutoRaise mode switch, shortcut recording/clearing 
 
 DebugとユニバーサルRelease（arm64/x86_64）のビルドが成功しています。アプリの `CFBundleLocalizations` に英語・日本語を宣言しました。ビルド済みアプリのInfo.plistとリソースを使った実行時の言語確認で、日本語優先時に `Sample` が「サンプル」、`AutoRaise compatibility` が「AutoRaise互換」になることを確認しました。このパッケージ構成の問題は別のレビュアーが指摘し、修正・検証しています。そのレビューにはほかの重大・重要・軽微な指摘はありませんでした。
 
+### 対象を絞った再検証（2026-10-31）
+
+後続の翻訳・エディタ実装を含む現在の `9863dce` で、第1段階の基礎動作を再確認しました。上記の当時の結果を置き換えたり、実際のデスクトップ操作全体を確認済みにしたりするものではありません。
+
+- `nice -n 10 swift test --jobs 2 --filter 'PopupGeometryTests|PopupPreferencesTests|AppLocalizationTests'`：**21件成功**。配置、画面外からの復旧、不正な設定、設定オブジェクト間の保存、実際の英日リソースの読み出しを確認しました。一部は第1段階以降に追加された項目です。
+- `nice -n 10 swift test --jobs 2 --filter 'PopupControllerTests/(compatibilityMode|standardMode|switchingMode|closingAndReleasing|longText|escapeKeyEvent|showingPreserves|focusLoss|closeButton|changingTopmost|recoversOffscreen)'`：**実ウィンドウを使う12件が成功**。独立した設定を使うテスト用ウィンドウを一時的に表示し、フォーカス保持、フォーカス中だけのEsc、閉じる・再表示、最前面切り替え、モード切り替え、長文のスクロール領域と位置・サイズ維持、画面外からの復旧、ウィンドウ解放を確認しました。後続の文章取得・エディタのテストは今回の対象外です。
+- 優先度を下げ、並列処理を2つに制限したDebugビルドが `.build/validation` で成功し、`codesign --verify --deep --strict` も成功しました。生成したアプリで `LSUIElement = true`、対応OS下限15.0、英日言語の宣言、ショートカット入力部のリソース、**英日228キーの一致**を確認しました。
+- VS Codeのタスク・起動設定が正しいJSONであること、Swift拡張機能 **2.18.0** の導入、Xcodeの `lldb-dap` 実行ファイルの存在を確認しました。これは前提条件の確認であり、F5による実際の起動確認ではありません。
+- 接続中の画面を2台認識しました。実モニターの着脱、Spaces・全画面への遷移、ポインター操作によるAutoRaiseの一連の動作、ショートカット入力部の操作は実施していません。Escはテスト用ウィンドウへ直接送っており、別アプリへのキー入力の証明にはなりません。製品コードと利用者の設定は変更せず、KotoFloat本体の起動・再起動も行っていません。
+
+今回の対象は**合計33テストが成功**しました。ログは `.build/phase1-verification-20261031/`（Git対象外）に保存しています。下記の手動確認項目は未完了のままです。以前の正常動作の報告だけでは、個々の確認項目の実施範囲を特定していません。
+
 ### 手動確認チェックリスト
 
-通常のAutoRaise設定を有効にしたまま、ビルドしたアプリで確認してください。自動テストから結果を推測しないでください。
+通常のAutoRaise設定を有効にしたまま、ビルドしたアプリで確認してください。自動テストから結果を推測しないでください。現在のアプリで固定文の配置を確認するときは **サンプルを表示** を使います。グローバルショートカットは現在、選択文を取得し、保存済みの接続設定で翻訳する動作になっています。
 
-- [ ] 別アプリにフォーカスして⌃⌥⌘T。サンプルが表示され、文字入力は元アプリへ届く。
+- [ ] 別アプリで文章を選択して⌃⌥⌘T。ポップアップが表示され、文字入力は元アプリへ届く。
 - [ ] 原文側へポインターを移し、AutoRaiseでフォーカスを変更してもポップアップが残る。
 - [ ] 元アプリでEsc。元アプリの通常動作が働き、ポップアップは残る。
 - [ ] ポップアップにフォーカスしてEsc。ポップアップだけ閉じ、ショートカットで再表示できる。
