@@ -89,6 +89,71 @@ struct LocalModelIntegrationTests {
         #expect(!(await received.text).isEmpty)
     }
 
+    // Capture real outputs for human review; a successful request does not prove translation quality.
+    // 実際の出力を目視評価用に保存する。通信の成功は翻訳品質の成功を意味しない。
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_EVALUATION_REPORT"] != nil))
+    @MainActor func recordsBilingualAndGlossarySamplesForReview() async throws {
+        struct Sample: Encodable {
+            let id: String
+            let text: String
+            let source: TranslationLanguage
+            let target: TranslationLanguage
+            var glossary: [GlossaryEntry] = []
+        }
+        struct Result: Encodable {
+            let sample: Sample
+            let state: String
+            let output: String
+            let missingPreferredTranslations: [String]
+        }
+        let english = "The voltage across the resistor is five volts."
+        let japanese = "抵抗器の両端の電位差は5 Vです。"
+        let samples = [
+            Sample(id: "en-ja-basic", text: english, source: .english, target: .japanese),
+            Sample(id: "ja-en-basic", text: japanese, source: .japanese, target: .english),
+            Sample(id: "en-ja-paragraphs", text: "Disconnect the power before replacing the resistor.\n\nAfter reconnecting the power, the voltage is 5 V and the current is 0.2 A.", source: .english, target: .japanese),
+            Sample(id: "ja-en-paragraphs", text: "抵抗器を交換する前に、電源を切ってください。\n\n電源を再接続した後、電圧は5 V、電流は0.2 Aです。", source: .japanese, target: .english),
+            Sample(id: "en-ja-glossary", text: english, source: .english, target: .japanese, glossary: [
+                GlossaryEntry(sourceTerm: "voltage", preferredTranslation: "電位差", sourceLanguage: .english, targetLanguage: .japanese, context: "Electrical potential difference across a component."),
+                GlossaryEntry(sourceTerm: "resistor", preferredTranslation: "抵抗器", sourceLanguage: .english, targetLanguage: .japanese)
+            ]),
+            Sample(id: "ja-en-glossary", text: japanese, source: .japanese, target: .english, glossary: [
+                GlossaryEntry(sourceTerm: "電位差", preferredTranslation: "potential difference", sourceLanguage: .japanese, targetLanguage: .english, context: "Electrical potential difference across a component."),
+                GlossaryEntry(sourceTerm: "抵抗器", preferredTranslation: "resistor", sourceLanguage: .japanese, targetLanguage: .english)
+            ])
+        ]
+        let server = try configuration()
+        var results: [Result] = []
+        for sample in samples {
+            let directory = FileManager.default.temporaryDirectory.appendingPathComponent("KotoFloatEvaluation-\(UUID())")
+            defer { try? FileManager.default.removeItem(at: directory) }
+            let store = GlossaryStore(url: directory.appendingPathComponent("glossaries.json"))
+            if !sample.glossary.isEmpty {
+                let id = try store.create(name: "Acceptance glossary")
+                for entry in sample.glossary { try store.saveEntry(entry, in: id) }
+                try store.select(id)
+            }
+            try await withTranslationContext { preferences, credentials in
+                try preferences.save(server, tokenUpdate: .keep, credentials: credentials)
+                preferences.sourceLanguage = sample.source
+                preferences.targetLanguage = sample.target
+                let model = TranslationModel(preferences: preferences, credentials: credentials, glossaries: store)
+                defer { model.cancel() }
+                model.editSource(sample.text)
+                model.translateSource()
+                try await waitUntilFinished(model)
+                #expect(model.state == .completed)
+                #expect(model.input?.glossary.entries == sample.glossary)
+                results.append(Result(sample: sample, state: String(describing: model.state), output: model.output,
+                                      missingPreferredTranslations: model.missingGlossaryTerms.map(\.preferredTranslation)))
+            }
+        }
+        let path = try #require(ProcessInfo.processInfo.environment["KOTOFLOAT_EVALUATION_REPORT"])
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(results).write(to: URL(fileURLWithPath: path), options: .atomic)
+    }
+
     @MainActor private func waitUntilFinished(_ model: TranslationModel) async throws {
         let deadline = ContinuousClock.now.advanced(by: .seconds(30))
         while model.state == .running, ContinuousClock.now < deadline {
