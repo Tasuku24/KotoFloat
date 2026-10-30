@@ -94,7 +94,7 @@ The evaluation recorder is disabled without `KOTOFLOAT_EVALUATION_REPORT`; all r
 - [ ] Visual inspection at the minimum size and in dark mode, very long glossary-warning lists, source expansion with long content, and all close/minimize combinations during active generation. Minimum-size scrolling in both appearances passed native tests; the live large/light layout and specific transitions above passed. Do not infer the full matrix from those samples.
 - [ ] Real HTTPS/VPN transport and certificate/authentication behavior against the intended remote service. No remote endpoint was available or supplied; the real-model and Keychain checks used loopback HTTP only.
 
-The app remains a locally signed development preview. Phase 6 acceptance, distribution signing, and notarization are separate.
+The app remains a locally signed development preview. Release acceptance (now Phase 7 in the [revised roadmap](../superpowers/plans/2026-10-29-initial-release-phases.md)), distribution signing, and notarization are separate. The Phase 5 merge does not close the pending items above.
 
 Click-based alternative translations, speech, tone controls, document translation, OCR, and saved history are not implemented in Phase 5. The DeepL reference concerns basic text interactions, not service integration or complete parity.
 
@@ -192,6 +192,6 @@ KOTOFLOAT_LOCAL_MODEL=qwen2.5-0.5b-instruct KOTOFLOAT_EVALUATION_REPORT="$PWD/.b
 - [ ] 最小サイズと暗色での目視、長い用語警告リスト、長文の原文展開、生成中の閉じる／最小化の全組み合わせ。最小サイズで両外観のスクロールはネイティブテスト、大きい明色画面と上記の特定の遷移は実機で成功していますが、全組み合わせの成功は推測しません。
 - [ ] 実際の遠隔サービスでのHTTPS／VPN通信、証明書と認証。接続先の提供・設定がなかったため未検証です。実モデルとKeychainの確認はループバックHTTPのみです。
 
-アプリはローカル署名の開発プレビューです。第6段階の受け入れ、配布署名、公証は別作業です。
+アプリはローカル署名の開発プレビューです。配布前の受け入れ（[改訂した開発計画](../superpowers/plans/2026-10-29-initial-release-phases.md)では第7段階）、配布署名、公証は別作業です。第5段階のマージによって上記の未確認項目が完了したとは扱いません。
 
 単語クリックによる代替訳、音声、文体指定、文書翻訳、OCR、履歴保存は第5段階で実装していません。DeepLは基本的な文章操作の参考であり、サービス接続や全機能の同等性を意味しません。

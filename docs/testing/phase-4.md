@@ -31,7 +31,7 @@ Storage/CSV is bounded to 16 MiB, 100 glossaries and 10,000 total entries. Names
 - [ ] Native file panels, CSV import/export to user-selected locations, spreadsheet interoperability, and backup/restore in the signed app.
 - [ ] Popup selection, long warning lists, resize/focus/Escape/AutoRaise behavior on the user's desktop.
 - [ ] Real LLM adherence, context-dependent terms, conflicting terminology, and false positives/negatives in advisory missing-term detection.
-- [ ] Previously pending real-server/HTTPS/VPN/Keychain checks from Phase 3 remain pending. This is an ad-hoc-signed development preview; Phase 5 editing and Phase 6 release acceptance are not implemented here.
+- [ ] Previously pending real-server/HTTPS/VPN/Keychain checks from Phase 3 remain pending. This is an ad-hoc-signed development preview; Phase 5 editing and release acceptance (now Phase 7 in the [revised roadmap](../superpowers/plans/2026-10-29-initial-release-phases.md)) are outside this Phase 4 record.
 
 ## 日本語
 
@@ -64,4 +64,4 @@ CSVは文書化したUTF-8の7列を使います。全レコード、重複方�
 - [ ] ファイルパネル、指定場所へのCSV入出力、表計算との相互利用、署名済みアプリでのバックアップ／復元。
 - [ ] ポップアップの選択、長い要確認一覧、リサイズ・フォーカス・Esc・AutoRaiseの実機動作。
 - [ ] 実LLMでの用語遵守、文脈に依存する訳語、用語競合、指定訳語欠落の補助判定の誤検出・見逃し。
-- [ ] 第3段階で保留した実サーバー・HTTPS／VPN・Keychainも引き続き未確認です。アドホック署名の開発用プレビューであり、第5段階の編集と第6段階の配布受け入れは今回の実装範囲に含みません。
+- [ ] 第3段階で保留した実サーバー・HTTPS／VPN・Keychainも引き続き未確認です。アドホック署名の開発用プレビューであり、第5段階の編集と配布受け入れ（[改訂した開発計画](../superpowers/plans/2026-10-29-initial-release-phases.md)では第7段階）は、この第4段階の記録の範囲に含みません。

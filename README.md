@@ -8,6 +8,8 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 ### Development status
 
+Phase 5 is merged into `main`, with remaining acceptance checks still open. Next is **Phase 6: searchable target-language selection and favorites**; **Phase 7** covers end-to-end acceptance and distribution preparation. The quick-switch interaction (buttons, shortcuts, or both) remains to be decided. See the [revised roadmap](docs/superpowers/plans/2026-10-29-initial-release-phases.md).
+
 Phases 1–5 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, and a shared translation editor. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Fixed API fixtures and real local LM Studio English/Japanese smoke translations have been verified; remote HTTPS/VPN acceptance remains pending.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
@@ -87,7 +89,7 @@ Limits are 100 glossaries, 10,000 total entries, 16 MiB per library/CSV, and 120
 - `Sources/KotoFloatKit/`: AppKit popup management, selected-text capture, clipboard transactions, SwiftUI views, preferences, and localized resources.
 - `Tests/KotoFloatKitTests/`: capture lifecycle, clipboard safety, placement, persistence, and native window behavior tests.
 - `KotoFloat.xcodeproj/`: the app wrapper linking the local Swift package.
-- `docs/superpowers/plans/`: the [six-phase roadmap](docs/superpowers/plans/2026-10-29-initial-release-phases.md) and detailed phase plans.
+- `docs/superpowers/plans/`: the [seven-phase roadmap](docs/superpowers/plans/2026-10-29-initial-release-phases.md) and detailed phase plans.
 
 ### Goals for the first version
 
@@ -96,7 +98,7 @@ Limits are 100 glossaries, 10,000 total entries, 16 MiB per library/CSV, and 120
 - Connect to a self-hosted local LLM server without tying the app to a specific model. LM Studio's OpenAI-compatible API is the first integration target.
 - Let users copy translations and edit them in a shared main window.
 
-The first release includes all six phases. Final model selection and click-based alternative translations come afterward. Translation and glossary logic will remain separate from the UI so that the popup and main window can share it.
+The first release includes all seven phases. Final model selection and click-based alternative translations come afterward. Translation and glossary logic will remain separate from the UI so that the popup and main window can share it.
 
 ### Data handling principles
 
@@ -119,6 +121,8 @@ No license has been selected. This project does not currently grant an open-sour
 選択した文章を、その場で翻訳する。用語集とローカルLLMを活用するmacOS向け翻訳アプリの開発プロジェクトです。
 
 ### 開発状況
+
+第5段階は`main`へマージ済みですが、残る受け入れ確認は未完了です。次は **第6段階：検索付き翻訳先言語選択とお気に入り**、その後は **第7段階：通し検証と配布準備** です。素早い切り替え操作をボタン・ショートカット・併用のどれにするかは未決定です。[改訂した開発計画](docs/superpowers/plans/2026-10-29-initial-release-phases.md)を参照してください。
 
 第1〜第5段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。固定API応答とローカルの実LM Studioによる英日翻訳の疎通を確認済みで、遠隔HTTPS／VPNは未確認です。
 
@@ -194,7 +198,7 @@ python3 scripts/test_with_mock_server.py
 - `Sources/KotoFloatKit/`：AppKitのポップアップ制御、選択文章取得、クリップボード処理、SwiftUI画面、設定、言語リソース。
 - `Tests/KotoFloatKitTests/`：取得要求の管理、クリップボード保護、配置、保存、実際のウィンドウ動作のテスト。
 - `KotoFloat.xcodeproj/`：ローカルのSwiftパッケージを利用するアプリ。
-- `docs/superpowers/plans/`：[6段階の開発計画](docs/superpowers/plans/2026-10-29-initial-release-phases.md)と各段階の詳細計画。
+- `docs/superpowers/plans/`：[7段階の開発計画](docs/superpowers/plans/2026-10-29-initial-release-phases.md)と各段階の詳細計画。
 
 ### 初期版で目指すこと
 
@@ -203,7 +207,7 @@ python3 scripts/test_with_mock_server.py
 - 自分で運用するローカルLLMサーバーへ接続し、モデルを固定しない。最初の接続対象はLM StudioのOpenAI互換API。
 - 翻訳結果をコピーし、共通のメイン画面で編集できるようにする。
 
-初期版には6段階すべてを含めます。最終的なモデル選定とクリックによる別訳候補の選択はその後です。翻訳・用語集の処理を画面から分離し、ポップアップとメイン画面で共有します。
+初期版には7段階すべてを含めます。最終的なモデル選定とクリックによる別訳候補の選択はその後です。翻訳・用語集の処理を画面から分離し、ポップアップとメイン画面で共有します。
 
 ### データの取り扱い方針
 
