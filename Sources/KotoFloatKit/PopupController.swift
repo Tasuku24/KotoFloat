@@ -11,6 +11,8 @@ final class PopupController: NSObject, NSWindowDelegate {
     private let captureEnvironment: any CaptureEnvironment
     var openSettings: (() -> Void)?
     var openGlossaries: (() -> Void)?
+    var openEditor: (() -> Void)?
+    var isEditorVisible: () -> Bool = { false }
 
     init(preferences: PopupPreferences, captureEnvironment: any CaptureEnvironment = SystemCaptureEnvironment(), translation: TranslationModel? = nil) {
         self.preferences = preferences
@@ -30,7 +32,7 @@ final class PopupController: NSObject, NSWindowDelegate {
             toggleTopmost: { [weak self] in
                 guard let self else { return }
                 setAlwaysOnTop(!preferences.alwaysOnTop)
-            }, openSettings: { [weak self] in self?.openSettings?() }, openGlossaries: { [weak self] in self?.openGlossaries?() }))
+            }, openSettings: { [weak self] in self?.openSettings?() }, openGlossaries: { [weak self] in self?.openGlossaries?() }, openEditor: { [weak self] in self?.openEditor?() }))
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         applyWindowLevel()
@@ -38,7 +40,7 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func showSample() {
         capture.cancel()
-        translation?.cancel(clear: true)
+        if !isEditorVisible() { translation?.cancel() }
         capture.showsSample = true
         showPopup()
     }
@@ -123,7 +125,7 @@ final class PopupController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         preferences.savedFrame = panel.frame
         capture.cancel()
-        translation?.cancel()
+        if !isEditorVisible() { translation?.cancel() }
     }
 
     @objc private func screensChanged(_ notification: Notification) { recoverVisibleFrame() }

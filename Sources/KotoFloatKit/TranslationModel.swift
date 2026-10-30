@@ -53,6 +53,7 @@ import Observation
     var glossaryChanged: Bool { input != nil && glossaryRevision != (glossaries?.revision ?? 0) }
 
     var resultText: String { editedOutput ?? output }
+    var sourceApplicationName: String? { capturedText?.source?.name }
     var hasEdits: Bool { editedOutput != nil }
     var sourceChanged: Bool { sourceText != (input?.text ?? "") }
     var directionChanged: Bool {

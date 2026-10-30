@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 import Testing
 @testable import KotoFloatKit
 
@@ -37,6 +37,22 @@ struct TranslationIntegrationTests {
             await waitFor { translation.state == .completed }
             #expect(translation.state == .completed)
             #expect(translation.output == "テスト応答です。実際の翻訳ではありません。")
+            let documentID = translation.documentID
+            translation.editTranslation("Synthetic edited translation")
+            let pasteboard = NSPasteboard(name: .init("KotoFloatEditorHTTP.\(UUID())"))
+            defer { pasteboard.releaseGlobally() }
+            #expect(translation.copyResult(to: pasteboard))
+            #expect(pasteboard.string(forType: .string) == "Synthetic edited translation")
+            #expect(translation.output == "テスト応答です。実際の翻訳ではありません。")
+            #expect(translation.documentID == documentID)
+            translation.retranslate()
+            #expect(translation.pendingAction != nil)
+            #expect(translation.resultText == "Synthetic edited translation")
+            translation.confirmPendingAction()
+            await waitFor { translation.state == .completed }
+            #expect(translation.documentID != documentID)
+            #expect(translation.resultText == "テスト応答です。実際の翻訳ではありません。")
+            #expect(!translation.undoManager.canUndo)
             translation.cancel()
         }
     }

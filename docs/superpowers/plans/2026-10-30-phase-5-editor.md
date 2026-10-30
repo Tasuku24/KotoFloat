@@ -33,9 +33,9 @@
 **Files:** new `TranslationEditorView.swift`, native text editor, `KotoFloatDelegate.swift`, `PopupController.swift`, `CaptureContentView.swift`, `TranslationContentView.swift`, localization resources.
 **Interfaces:** The delegate retains one editor window using the popup's `TranslationModel`. Native text controls send changes to model edit methods and use its undo manager. Shared status/glossary/actions/confirmation views consume the same model.
 
-- [ ] Build a resizable two-pane editor with source input, paste through normal native editing, character count, language selection/swap, clear, explicit translation/stop, editable completed result, generated-original disclosure, copy and undo/redo.
-- [ ] Add menu/popup navigation, preserve draft on close, coordinate popup cancellation, and confirm exit for drafts. Expand/collapse popup source; show result/source/settings mismatch and request glossary snapshot.
-- [ ] Localize all visible controls in English/Japanese. Run background tests and the required separate Debug build; expect pass without launching the app. Commit.
+- [x] Build a resizable two-pane editor with source input, paste through normal native editing, character count, language selection/swap, clear, explicit translation/stop, editable completed result, generated-original disclosure, copy and undo/redo.
+- [x] Add menu/popup navigation, preserve draft on close, coordinate popup cancellation, and confirm exit for drafts. Expand/collapse popup source; show result/source/settings mismatch and request glossary snapshot.
+- [x] Localize all visible controls in English/Japanese. Run background tests and the required separate Debug build; expect pass without launching the app. Commit.
 
 ### Task 3: Verification and documentation
 

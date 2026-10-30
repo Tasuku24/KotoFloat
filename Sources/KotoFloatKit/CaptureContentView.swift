@@ -8,6 +8,7 @@ struct PopupRootView: View {
     let toggleTopmost: () -> Void
     let openSettings: () -> Void
     var openGlossaries: () -> Void = {}
+    var openEditor: () -> Void = {}
 
     var body: some View {
         Group {
@@ -16,7 +17,7 @@ struct PopupRootView: View {
                     toggleTopmost: toggleTopmost, openSettings: openSettings)
             } else {
                 CaptureContentView(model: capture, preferences: preferences, translation: translation,
-                    toggleTopmost: toggleTopmost, openSettings: openSettings, openGlossaries: openGlossaries)
+                    toggleTopmost: toggleTopmost, openSettings: openSettings, openGlossaries: openGlossaries, openEditor: openEditor)
             }
         }
         .environment(\.locale, AppLocalization.shared.locale)
@@ -30,6 +31,8 @@ struct CaptureContentView: View {
     let toggleTopmost: () -> Void
     let openSettings: () -> Void
     var openGlossaries: () -> Void = {}
+    var openEditor: () -> Void = {}
+    @State private var sourceExpanded = false
     @FocusState private var manualFocused: Bool
 
     var body: some View {
@@ -61,10 +64,14 @@ struct CaptureContentView: View {
             .accessibilityIdentifier("captureScrollView")
             Divider()
             VStack(spacing: 10) {
+                if let translation { TranslationConfirmationView(model: translation) }
                 if case .captured = model.state, let translation {
                     TranslationActionsView(model: translation)
                 }
                 HStack {
+                    if translation != nil {
+                        Button(L10n.text("menu.editor"), action: openEditor).controlSize(.small)
+                    }
                     if model.state != .manual {
                         Button(L10n.text("capture.manual")) { model.beginManualEntry() }
                             .controlSize(.small)
@@ -85,7 +92,20 @@ struct CaptureContentView: View {
         case .capturing:
             ProgressView(L10n.text("capture.working"))
         case .captured(let text):
-            sourceText(text)
+            if let translation {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(translation.sourceApplicationName ?? L10n.text("capture.manualSource"))
+                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    if sourceExpanded {
+                        Text(translation.sourceText).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(String(translation.sourceText.prefix(300))).lineLimit(3).textSelection(.enabled)
+                    }
+                    Button(L10n.text(sourceExpanded ? "editor.collapseSource" : "editor.expandSource")) {
+                        sourceExpanded.toggle()
+                    }.controlSize(.small)
+                }
+            } else { sourceText(text) }
             Divider()
             if let translation { TranslationContentView(model: translation, openSettings: openSettings, openGlossaries: openGlossaries) }
         case .needsConfirmation(let text):
