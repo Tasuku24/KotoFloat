@@ -41,9 +41,9 @@
 
 **Files:** README, roadmap, `docs/testing/phase-5.md`, relevant regression tests.
 
-- [ ] Exercise actual URLSession with the existing loopback fixture, editor edits, copying to a named pasteboard, and retranslation. Run localization consistency checks and `git diff --check`.
-- [ ] Independently review the whole phase against the invariants, fix material findings with regression tests, and record evidence and limitations.
-- [ ] Update aligned English/Japanese documentation and checklist. Commit and leave `feature/phase-5-editor` unmerged.
+- [x] Exercise actual URLSession with the existing loopback fixture, editor edits, copying to a named pasteboard, and retranslation. Run localization consistency checks and `git diff --check`.
+- [x] Independently review the whole phase against the invariants, fix material findings with regression tests, and record evidence and limitations.
+- [x] Update aligned English/Japanese documentation and checklist. Commit and leave `feature/phase-5-editor` unmerged.
 
 **Verification boundary:** Only low-priority, two-job background commands. No app launch, focus/input synthesis, or native-window suite. Actual editor layout, keyboard/VoiceOver, focus/AutoRaise, native undo/menu interaction, and real-model quality remain explicit desktop acceptance checks.
 
