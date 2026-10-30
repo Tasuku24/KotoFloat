@@ -5,6 +5,14 @@ struct TranslationEditorView: View {
     let openSettings: () -> Void
     let openGlossaries: () -> Void
 
+    func makeHostingView() -> NSHostingView<TranslationEditorView> {
+        let host = NSHostingView(rootView: self)
+        // Keep the user's frame when result details or confirmation controls appear.
+        // 結果の詳細や確認操作が現れても、利用者が決めたウィンドウ枠を維持する。
+        host.sizingOptions = []
+        return host
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {

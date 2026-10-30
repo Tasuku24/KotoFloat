@@ -72,7 +72,11 @@ struct TranslationTextEditor: NSViewRepresentable {
 
 private final class DocumentTextView: NSTextView {
     weak var documentUndoManager: UndoManager?
-    override var undoManager: UndoManager? { documentUndoManager }
+    // AppKit still registers text-coalescing actions when allowsUndo is false. Keep those
+    // away from the model's explicitly grouped history; the actions below route Undo/Redo.
+    // allowsUndoがfalseでもAppKitは入力結合用の操作を登録するため、明示グループの
+    // モデル履歴とは分離する。Undo/Redoは下のアクションでモデルへ渡す。
+    override var undoManager: UndoManager? { nil }
 
     @objc func undo(_ sender: Any?) { documentUndoManager?.undo() }
     @objc func redo(_ sender: Any?) { documentUndoManager?.redo() }

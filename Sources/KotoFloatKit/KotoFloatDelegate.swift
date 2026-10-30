@@ -66,9 +66,9 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
             window.isReleasedWhenClosed = false
             window.contentMinSize = CGSize(width: 840, height: 600)
             window.delegate = self
-            window.contentView = NSHostingView(rootView: TranslationEditorView(model: model,
+            window.contentView = TranslationEditorView(model: model,
                 openSettings: { [weak self] in self?.showSettings() },
-                openGlossaries: { [weak self] in self?.showGlossaries() }))
+                openGlossaries: { [weak self] in self?.showGlossaries() }).makeHostingView()
             window.setFrameAutosaveName("TranslationEditor")
             if !window.setFrameUsingName("TranslationEditor") { window.center() }
             editorWindow = window

@@ -45,7 +45,7 @@
 - [x] Independently review the whole phase against the invariants, fix material findings with regression tests, and record evidence and limitations.
 - [x] Update aligned English/Japanese documentation and checklist. Commit and leave `feature/phase-5-editor` unmerged.
 
-**Verification boundary:** Only low-priority, two-job background commands. No app launch, focus/input synthesis, or native-window suite. Actual editor layout, keyboard/VoiceOver, focus/AutoRaise, native undo/menu interaction, and real-model quality remain explicit desktop acceptance checks.
+**Verification boundary:** The initial implementation used low-priority, two-job background commands only. The user subsequently authorized desktop verification. This exposed and fixed native undo registration and hosting-view frame growth; 115 background/loopback tests and 17 native tests pass. Live editing, selected window transitions, local LM Studio translation, glossary warnings, and Keychain persistence were checked. Remaining IME/VoiceOver/AutoRaise, visual/lifecycle, and remote-transport boundaries are recorded in [Phase 5 verification](../../testing/phase-5.md).
 
 ## 日本語
 
@@ -78,4 +78,4 @@
 
 既存ループバックAPIと実URLSession、編集、名前付きクリップボードへのコピー、再翻訳を検証する。翻訳キーと差分も確認する。独立レビューで重要な指摘を回帰テスト付きで修正し、README・計画・検証記録を英日で更新してコミットする。`feature/phase-5-editor`はマージしない。
 
-**検証範囲:** 低優先度・2ジョブの背景コマンドのみ。起動、フォーカス変更、入力の送出、ネイティブウィンドウテストは行わない。実際の配置、キーボード／VoiceOver、フォーカス／AutoRaise、ネイティブUndo／メニュー、実モデルの品質は実機確認として残す。
+**検証範囲:** 初回実装は低優先度・2ジョブの背景コマンドのみを使いました。その後、利用者が実画面検証を許可しました。ネイティブUndo登録とホスティングビューの枠拡大を発見・修正し、背景／ループバック115テストとネイティブ17テストが成功しました。実画面の編集、一部の画面遷移、ローカルLM Studio翻訳、用語警告、Keychain永続化を確認しました。残るIME／VoiceOver／AutoRaise、視覚・ライフサイクル、遠隔通信の条件は[第5段階の検証記録](../../testing/phase-5.md)に記載しています。

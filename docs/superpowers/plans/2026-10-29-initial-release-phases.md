@@ -100,7 +100,7 @@ Implementation and background/loopback checks are ready; real-model adherence an
 
 ### Phase 5: Main translation window and editing
 
-Implementation and background/loopback checks are ready. Actual editor layout, native keyboard/undo, window transitions, and real-model checks remain pending; see [Phase 5 verification](../../testing/phase-5.md).
+Implementation, 115 background/loopback tests, and 17 native tests pass. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise, remote HTTPS/VPN, and the remaining visual/lifecycle matrix still need acceptance; see [Phase 5 verification](../../testing/phase-5.md).
 
 - [x] Provide source input, the generated translation, an editable translation, copying, and undo.
 - [x] Transfer the same translation state from the popup to the main window.
@@ -230,7 +230,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第5段階：メイン翻訳画面と編集
 
-実装とバックグラウンド／ループバック検証を完了しました。エディタの実配置、ネイティブのキーボード／Undo、画面移動、実モデルは未確認です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
+実装、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、遠隔HTTPS／VPN、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
 
 - [x] 原文入力、生成訳、編集可能な訳文、コピー、取り消しを用意する。
 - [x] ポップアップから同じ翻訳状態をメイン画面へ引き継ぐ。

@@ -8,13 +8,13 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 ### Development status
 
-Phases 1–5 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, and a shared translation editor. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Phase 3 has been checked against fixed API fixtures; a real LLM server is not yet verified.
+Phases 1–5 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, and a shared translation editor. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Fixed API fixtures and real local LM Studio English/Japanese smoke translations have been verified; remote HTTPS/VPN acceptance remains pending.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
 
 Settings uses five tabs—**General**, **Popup**, **Text capture**, **Connection**, and **Translation**—without a scrolling container. Under **General → App language**, choose **Follow system** (the default), **English**, or **日本語**. The choice is saved and updates KotoFloat's screens and menus immediately; unsupported system languages fall back to English. System dialogs and some native controls still follow macOS. Under **Text capture**, **Check again** displays the check time and whether permission is enabled, even when the status has not changed.
 
-This is a **local development preview**. Glossaries and the translation editor are implemented; desktop acceptance of the editor remains pending. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), [Phase 3 verification](docs/testing/phase-3.md), [Phase 4 verification](docs/testing/phase-4.md), and [Phase 5 verification](docs/testing/phase-5.md) for actual checks and limitations.
+This is a **local development preview**. Glossaries and the translation editor are implemented. Desktop editing, shared-window navigation, local-model translation, and Keychain persistence have been checked; actual IME/VoiceOver/AutoRaise and part of the visual acceptance matrix remain pending. There is no notarized downloadable release yet. See [Phase 1 verification](docs/testing/phase-1.md), [Phase 2 verification](docs/testing/phase-2.md), [Phase 3 verification](docs/testing/phase-3.md), [Phase 4 verification](docs/testing/phase-4.md), and [Phase 5 verification](docs/testing/phase-5.md) for actual checks and limitations.
 
 ### Build and run
 
@@ -120,13 +120,13 @@ No license has been selected. This project does not currently grant an open-sour
 
 ### 開発状況
 
-第1〜第5段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。第3段階は固定API応答で検証しており、実LLMサーバーは未確認です。
+第1〜第5段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。固定API応答とローカルの実LM Studioによる英日翻訳の疎通を確認済みで、遠隔HTTPS／VPNは未確認です。
 
 AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → ポップアップ → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
 設定画面は **一般・ポップアップ・文章取得・接続・翻訳** の5つのタブに分かれ、スクロールする領域を設けていません。**一般 → アプリの言語** から **システムに従う**（初期設定）、**English**、**日本語** を選べます。選択は保存され、KotoFloatの画面とメニューにすぐ反映されます。システムの優先言語に対応言語がない場合は英語になります。システムのダイアログと一部の標準部品はmacOSの言語に従います。**文章取得** の **再確認** を押すと、状態が変わらない場合も、確認時刻と権限の有効・無効を表示します。
 
-現在は **ローカル開発用プレビュー** です。用語集と翻訳エディタは実装済みで、エディタの実画面での受け入れ確認は未実施です。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階](docs/testing/phase-3.md)・[第4段階](docs/testing/phase-4.md)・[第5段階の検証記録](docs/testing/phase-5.md)を参照してください。
+現在は **ローカル開発用プレビュー** です。用語集と翻訳エディタは実装済みです。実画面の編集、共有画面間の移動、ローカル実モデル、Keychainの永続化を確認しました。実IME／VoiceOver／AutoRaiseと一部の視覚的な受け入れ条件は未確認です。公証済みの配布版はまだありません。実際の確認結果と制限は、[第1段階](docs/testing/phase-1.md)・[第2段階](docs/testing/phase-2.md)・[第3段階](docs/testing/phase-3.md)・[第4段階](docs/testing/phase-4.md)・[第5段階の検証記録](docs/testing/phase-5.md)を参照してください。
 
 ### ビルドと起動
 

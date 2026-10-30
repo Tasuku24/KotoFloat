@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Testing
 @testable import KotoFloatKit
 
@@ -233,6 +234,119 @@ struct PopupControllerTests {
             #expect(!controller.panel.isVisible)
             #expect(controller.capture.state == .idle)
         }
+    }
+
+    @Test func editorNativeInsertionUpdatesTheSharedModel() async throws {
+        try await withTranslationContext { preferences, credentials in
+            _ = NSApplication.shared
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            let window = NSWindow(contentRect: CGRect(x: 50, y: 50, width: 900, height: 650),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            let host = TranslationEditorView(model: model, openSettings: {}, openGlossaries: {}).makeHostingView()
+            window.contentView = host
+            defer { window.close() }
+            window.makeKeyAndOrderFront(nil)
+            try await Task.sleep(for: .milliseconds(80))
+            host.layoutSubtreeIfNeeded()
+            let initialFrame = window.frame
+            let source = try #require(textViews(in: host).first)
+            #expect(source.isEditable)
+            #expect(source.delegate != nil)
+            window.makeFirstResponder(source)
+            source.insertText("Native source text", replacementRange: NSRange(location: NSNotFound, length: 0))
+            #expect(source.string == "Native source text")
+            #expect(model.sourceText == "Native source text")
+            #expect(model.canTranslate)
+            try await Task.sleep(for: .milliseconds(40))
+            #expect(window.frame == initialFrame)
+            #expect(NSApp.sendAction(NSSelectorFromString("undo:"), to: source, from: nil))
+            try await Task.sleep(for: .milliseconds(30))
+            #expect(model.sourceText.isEmpty)
+            #expect(source.string.isEmpty)
+            #expect(NSApp.sendAction(NSSelectorFromString("redo:"), to: source, from: nil))
+            try await Task.sleep(for: .milliseconds(30))
+            #expect(model.sourceText == "Native source text")
+            #expect(source.string == "Native source text")
+            #expect(window.frame == initialFrame)
+            model.translateSource()
+            await waitFor { await service.count == 1 }
+            await service.emit("Generated native result", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            model.editTranslation("Edited native result")
+            try await Task.sleep(for: .milliseconds(80))
+            #expect(window.frame == initialFrame)
+            model.retranslate()
+            try await Task.sleep(for: .milliseconds(80))
+            #expect(window.frame == initialFrame)
+            model.keepEditing()
+            model.cancel()
+            await service.finishAll()
+        }
+    }
+
+    @Test func editorPreservesMarkedTextAndScrollsAtMinimumSize() async throws {
+        try await withTranslationContext { preferences, credentials in
+            _ = NSApplication.shared
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            let window = NSWindow(contentRect: CGRect(x: 50, y: 50, width: 840, height: 600),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            let host = TranslationEditorView(model: model, openSettings: {}, openGlossaries: {}).makeHostingView()
+            window.contentView = host
+            defer { window.close() }
+            window.makeKeyAndOrderFront(nil)
+            try await Task.sleep(for: .milliseconds(80))
+            let source = try #require(textViews(in: host).first)
+            window.makeFirstResponder(source)
+            source.setMarkedText("にほん", selectedRange: NSRange(location: 3, length: 0),
+                                 replacementRange: NSRange(location: NSNotFound, length: 0))
+            try await Task.sleep(for: .milliseconds(80))
+            #expect(source.hasMarkedText())
+            #expect(source.string == "にほん")
+            source.setMarkedText("日本", selectedRange: NSRange(location: 2, length: 0),
+                                 replacementRange: NSRange(location: NSNotFound, length: 0))
+            source.insertText("日本語", replacementRange: NSRange(location: NSNotFound, length: 0))
+            try await Task.sleep(for: .milliseconds(80))
+            #expect(!source.hasMarkedText())
+            #expect(source.string == "日本語")
+            #expect(model.sourceText == "日本語")
+            let frame = window.frame
+            let longText = String(repeating: "A long source line for scrolling. 長文スクロールの確認。\n", count: 200)
+            model.editSource(longText)
+            model.translateSource()
+            await waitFor { await service.count == 1 }
+            await service.emit(longText, at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            for appearance in [NSAppearance.Name.aqua, .darkAqua] {
+                window.appearance = NSAppearance(named: appearance)
+                try await Task.sleep(for: .milliseconds(80))
+                host.layoutSubtreeIfNeeded()
+                let editors = textViews(in: host)
+                #expect(editors.count == 2)
+                for editor in editors {
+                    let scroll = try #require(editor.enclosingScrollView)
+                    #expect(editor.string == longText)
+                    #expect(editor.frame.height > scroll.contentView.bounds.height)
+                    #expect(scroll.frame.height > 0)
+                    #expect(scroll.frame.width >= 300)
+                    editor.scrollRangeToVisible(NSRange(location: (longText as NSString).length, length: 0))
+                    #expect(scroll.contentView.bounds.minY > 0)
+                }
+                #expect(window.frame == frame)
+            }
+            model.cancel()
+            await service.finishAll()
+        }
+    }
+
+    private func textViews(in view: NSView) -> [NSTextView] {
+        if let text = view as? NSTextView { return [text] }
+        return view.subviews.flatMap { textViews(in: $0) }
     }
 
     private func withCaptureController(_ body: (PopupController, CaptureEnvironmentStub) async throws -> Void) async throws {
