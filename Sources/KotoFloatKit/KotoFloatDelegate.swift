@@ -124,7 +124,12 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
 
     private func configureMenuBar() {
         let item = statusItem ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        item.button?.image = NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
+        let image = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "pdf")
+            .flatMap { NSImage(contentsOf: $0) }
+        image?.size = NSSize(width: 18, height: 18)
+        image?.isTemplate = true
+        image?.accessibilityDescription = "KotoFloat"
+        item.button?.image = image ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
         item.button?.toolTip = "KotoFloat"
         let menu = NSMenu()
         menu.addItem(actionItem("menu.editor", action: #selector(showEditor)))
