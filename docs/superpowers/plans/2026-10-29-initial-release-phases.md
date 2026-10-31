@@ -16,7 +16,7 @@
 
 ### Revised sequence (2026-10-31)
 
-The initial release now has seven phases. Phase 5 has been merged into `main`, but its remaining acceptance work is still open. Language selection and favorite languages are the next feature phase (Phase 6); the former Phase 6 becomes Phase 7. A merge does not establish acceptance completion.
+The initial release now has seven phases. Phase 5 has been merged into `main`, but its remaining acceptance work is still open. Language selection and favorite languages are Phase 6; the former Phase 6 becomes Phase 7. Phase 6 is implemented on its feature branch, with remaining acceptance recorded separately. A merge does not establish acceptance completion.
 
 | Phase | Scope | Status |
 | --- | --- | --- |
@@ -25,7 +25,7 @@ The initial release now has seven phases. Phase 5 has been merged into `main`, b
 | 3 | LLM connection and basic translation | Implemented; local-model evidence was added in Phase 5; remote/distribution checks remain open. |
 | 4 | Glossary integration | Implemented; model adherence has limitations and desktop acceptance remains open. |
 | 5 | Main translation window and editing | Merged into `main`; remaining acceptance work is tracked below. |
-| 6 | Searchable language selection and favorites | Next feature phase; detailed interaction choices are not yet finalized. |
+| 6 | Searchable language selection and favorites | Implemented; verification and remaining acceptance are recorded in Phase 6. |
 | 7 | End-to-end verification and distribution preparation | Follows Phase 6 and closes outstanding acceptance work from earlier phases. |
 
 Develop Phase 6 on `feature/language-picker-and-favorites` from the latest `main`, rather than continuing the merged Phase 5 branch. Define its detailed design and implementation plan before product-code changes. Fix any newly discovered draft-loss or stale-response defect before building on the affected behavior; unresolved acceptance items remain visible and block release claims.
@@ -53,7 +53,7 @@ Develop Phase 6 on `feature/language-picker-and-favorites` from the latest `main
 - Reuse one popup. Stale responses must not overwrite newer results.
 - Store glossaries on the Mac and send only relevant entries with a translation request.
 - Distinguish source text, generated translation, and edited translation. Moving to the editor must not generate a new translation.
-- Open a searchable target-language dropdown by clicking the language name in the popup, and configure a few favorite languages in settings for quick switching. The quick-switch mechanism remains a Phase 6 design decision.
+- Open a searchable target-language dropdown by clicking the language name in the popup, and configure a few favorite languages in settings for quick switching. Phase 6 uses up to five favorite buttons with Command-1–5 active only in the focused popup/editor.
 
 ### Review focus
 
@@ -130,15 +130,15 @@ Merged into `main` through PR #5 on 2026-10-31; acceptance is still in progress.
 
 ### Phase 6: Searchable language selection and favorites
 
-Planned next; not implemented. The confirmed scope is a searchable target-language dropdown opened from the popup's language name, plus settings for a few favorite languages and a quick way to switch between them.
+Implemented on `feature/language-picker-and-favorites`; see the [detailed plan](2026-10-31-phase-6-languages.md) and [verification record](../../testing/phase-6.md). Final model selection and remaining physical-user acceptance are separate.
 
-- [ ] Define the selectable language list and search names, including language variants where needed. Distinguish app-selectable languages from the configured model's demonstrated translation quality.
-- [ ] Implement the popup dropdown with search, a selected-language indicator, and keyboard navigation. Opening or dismissing it must not submit a translation or close the parent popup unexpectedly.
-- [ ] Let users configure and persist favorite target languages in settings, and define their ordering and presentation.
-- [ ] Decide the quick-switch interaction before implementation: favorite buttons, keyboard shortcuts, or a combination. Buttons with optional shortcuts active only while KotoFloat has focus are the current recommendation, not an approved requirement. The favorite count and exact key bindings remain open.
-- [ ] Share the target-language and favorite settings between the popup and main editor. Preserve current English/Japanese preferences, existing glossary data, and language-direction matching as language support expands; define any required storage migration before changing saved formats.
-- [ ] Preserve source/generated/edited separation, request-language snapshots, draft protection, and stale-response rejection when switching languages. Keeping explicit retranslation is the current recommendation; automatic retranslation remains an open design choice and must not silently discard edits.
-- [ ] Verify language search, preference restoration, favorite switching, request language instructions, glossary compatibility, and draft protection with background tests. Separately coordinate desktop checks for dropdown focus/Esc behavior, IME search, keyboard/VoiceOver access, and narrow layouts.
+- [x] Define 26 selectable languages, English/Japanese/native search names and codes, and Chinese-script/Portuguese-region variants. State model-quality limits in the picker.
+- [x] Implement a shared native search dropdown, selected-language indicator, arrows/Return, and picker-only Escape without sending a request.
+- [x] Persist up to five ordered favorites, with add/remove/reorder in Translation settings; default Japanese/English and allow an empty list.
+- [x] User chose favorite buttons plus Command-1–5, active only in the focused popup/editor.
+- [x] Share preferences between windows; keep `automatic`/`en`/`ja`, JSON schema version 1, CSV codes, and exact glossary direction matching. No storage migration is needed.
+- [x] Keep explicit retranslation, request-language snapshots, draft protection, and stale-response rejection.
+- [x] Verify catalog/search/persistence, requests/glossary compatibility, edited drafts, and native focus/Escape/keyboard behavior; record remaining physical IME/VoiceOver/layout acceptance.
 
 **Completion criteria:** Users can search for and select a target language from the popup and quickly select configured favorites. Both translation windows agree on the selection, existing data and edits remain safe, and language/model limitations and desktop verification results are recorded. Final model selection is not part of this phase.
 
@@ -181,7 +181,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 開発順序の改訂（2026-10-31）
 
-初期版を7段階に変更する。第5段階は`main`へマージ済みだが、残る受け入れ確認は未完了。次の機能開発を言語選択・お気に入りの第6段階とし、従来の第6段階を第7段階へ移す。マージ済みを受け入れ確認済みとは扱わない。
+初期版を7段階に変更する。第5段階は`main`へマージ済みだが、残る受け入れ確認は未完了。言語選択・お気に入りを第6段階とし、従来の第6段階を第7段階へ移す。第6段階は専用ブランチで実装し、残る受け入れ確認を別途記録している。マージ済みを受け入れ確認済みとは扱わない。
 
 | 段階 | 範囲 | 状況 |
 | --- | --- | --- |
@@ -190,7 +190,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 | 3 | LLM接続と基本翻訳 | 実装済み。第5段階でローカル実モデルの証拠を追加。遠隔通信・配布時の確認は残る。 |
 | 4 | 用語集 | 実装済み。モデルの用語遵守には制限があり、実画面の確認も残る。 |
 | 5 | メイン翻訳画面と編集 | `main`へマージ済み。残る受け入れ確認は以下で管理する。 |
-| 6 | 検索付き言語選択とお気に入り | 次の機能開発。操作方法の詳細は未確定。 |
+| 6 | 検索付き言語選択とお気に入り | 実装済み。検証と残る受け入れ確認は第6段階に記録。 |
 | 7 | 通し検証と配布準備 | 第6段階後に実施し、前段階から残る受け入れ確認を完了する。 |
 
 第6段階は、マージ済みの第5段階のブランチを継続せず、最新の`main`から`feature/language-picker-and-favorites`を作って開発する。製品コードの変更前に詳細設計と実装手順を定義する。下書き消失や古い応答による上書きが新たに判明した場合は、その動作へ機能を積み重ねる前に修正する。未完了の受け入れ項目は保持し、リリース完了の扱いを妨げる条件とする。
@@ -218,7 +218,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 - 一つのポップアップを再利用する。古い応答は新しい結果を上書きしない。
 - 用語集はMac内に保存し、関係する項目のみを翻訳要求へ含める。
 - 原文、生成訳、編集後の訳文を区別する。編集画面への移動で再翻訳しない。
-- ポップアップの言語名を押すと検索付きの翻訳先言語プルダウンを開き、設定で数個のお気に入り言語を登録して素早く切り替えられるようにする。素早い切り替えの操作方法は第6段階で決める。
+- ポップアップの言語名を押すと検索付きの翻訳先言語プルダウンを開き、設定で数個のお気に入り言語を登録して素早く切り替えられるようにする。第6段階では最大5個のボタンと、フォーカス中のポップアップ／エディタ内だけで有効なCommand-1〜5を使う。
 
 ### 重点確認項目
 
@@ -295,15 +295,15 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第6段階：検索付き言語選択とお気に入り
 
-次に実施する予定であり、未実装。確定した範囲は、ポップアップの言語名から開く検索付き翻訳先言語プルダウンと、設定で登録する数個のお気に入り言語、および素早い切り替え操作。
+`feature/language-picker-and-favorites`で実装しました。[詳細計画](2026-10-31-phase-6-languages.md)と[検証記録](../../testing/phase-6.md)を参照してください。モデルの最終選定と残る実利用者の受け入れ確認は別です。
 
-- [ ] 選択可能な言語と検索用の名称を定義し、必要に応じて言語の種類も区別する。アプリで選べる言語と、設定したモデルで翻訳品質を確認できた言語は区別する。
-- [ ] 検索、選択中の表示、キーボード移動を備えたプルダウンをポップアップに実装する。開閉だけで翻訳を送信せず、親のポップアップを意図せず閉じない。
-- [ ] 設定でお気に入りの翻訳先言語を登録・保存できるようにし、順序と表示方法を定義する。
-- [ ] 実装前に、お気に入りボタン、キーボードショートカット、または併用から切り替え操作を決める。ボタンを基本とし、KotoFloatにフォーカスがあるときだけ有効なショートカットを任意で追加する案は現時点の推奨であり、承認済みの要件ではない。登録数と具体的なキーも未決定。
-- [ ] 翻訳先言語とお気に入り設定をポップアップ・メイン画面で共有する。言語対応を広げても、既存の英日設定、用語集データ、言語方向の照合を保持する。保存形式の変更に移行処理が必要なら変更前に定義する。
-- [ ] 言語切り替え時も、原文・生成訳・編集訳の区別、要求時の言語情報、下書き保護、古い応答の排除を維持する。明示的な再翻訳を維持する案を推奨するが、自動再翻訳の採否は設計時に決め、編集内容を黙って破棄しない。
-- [ ] 言語検索、設定復元、お気に入り切り替え、要求の言語指定、用語集との互換性、下書き保護をバックグラウンドテストで検証する。プルダウンのフォーカス／Esc、IME検索、キーボード／VoiceOver、狭い画面の実操作確認は別途調整する。
+- [x] 26言語、英語／日本語／現地名とコード、中国語の字体・ポルトガル語の地域差を定義し、モデル品質の制限を選択画面に表示する。
+- [x] 共通のネイティブ検索画面、選択表示、上下矢印／Return、選択画面だけを閉じるEscを実装し、選択では送信しない。
+- [x] お気に入りを最大5件、順序付きで保存し、設定の翻訳タブで追加・削除・並べ替える。初期値は日本語／英語、空も許可する。
+- [x] 利用者がボタン＋Command-1〜5を選択し、フォーカス中のポップアップ／エディタ内だけで有効にする。
+- [x] 両画面で設定を共有し、`automatic`／`en`／`ja`、JSON版1、CSVコード、用語集方向の厳密な一致を維持する。保存移行は不要。
+- [x] 明示的な再翻訳、要求時の言語情報、下書き保護、古い応答の排除を維持する。
+- [x] 言語一覧・検索・復元、要求・用語集互換、編集保持、ネイティブのフォーカス／Esc／キー操作を検証し、実IME／VoiceOver／画面配置の残項目を記録する。
 
 **完了条件:** ポップアップで翻訳先言語を検索・選択でき、登録したお気に入りへ素早く切り替えられる。両翻訳画面の選択が一致し、既存データと編集内容を保持し、言語・モデルの制限と実画面の確認結果を記録する。モデルの最終選定は本段階に含めない。
 

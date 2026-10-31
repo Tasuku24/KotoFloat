@@ -12,21 +12,21 @@
 
 ### Task 1: Catalog and preferences
 
-- [ ] Add tests for search aliases/scripts, stable Codable values, legacy preferences, invalid/duplicate/oversized favorites, empty favorites and persistence; observe failure.
-- [ ] Implement TranslationLanguage catalog/search/prompt names and normalized favorite persistence in TranslationPreferences.
-- [ ] Run `nice -n 10 swift test --jobs 2 --filter 'Language|TranslationSettingsTests'`; expect pass. Commit.
+- [x] Add tests for search aliases/scripts, stable Codable values, legacy preferences, invalid/duplicate/oversized favorites, empty favorites and persistence; observe failure.
+- [x] Implement TranslationLanguage catalog/search/prompt names and normalized favorite persistence in TranslationPreferences.
+- [x] Run `nice -n 10 swift test --jobs 2 --filter 'Language|TranslationSettingsTests'`; expect pass. Commit.
 
 ### Task 2: Shared controls and lifecycle
 
-- [ ] Add request tests for expanded direction, active-request snapshots, edited-draft preservation, stale confirmations, and glossary JSON/CSV direction round trips.
-- [ ] Replace language controls, add searchable keyboard-operated popover, favorite buttons/local shortcuts and settings ordering. Add aligned English/Japanese strings.
-- [ ] Run background tests and a separate Debug build; expect pass. Commit.
+- [x] Add request tests for expanded direction, active-request snapshots, edited-draft preservation, stale confirmations, and glossary JSON/CSV direction round trips.
+- [x] Replace language controls, add searchable keyboard-operated popover, favorite buttons/local shortcuts and settings ordering. Add aligned English/Japanese strings.
+- [x] Run background tests and a separate Debug build; expect pass. Commit.
 
 ### Task 3: Verification and documentation
 
-- [ ] Verify actual keyboard/picker behavior in native windows where available; record limitations honestly. Run loopback fixture tests, localization parity, and diff checks.
-- [ ] Review whole diff for target Automatic, focus/Escape handling, shortcut scope, IME interaction, persistence, and draft/request protection. Fix material findings.
-- [ ] Update README, roadmap, and Phase 6 verification in English then Japanese. Commit; leave branch unmerged.
+- [x] Verify actual keyboard/picker behavior in native windows where available; record limitations honestly. Run loopback fixture tests, localization parity, and diff checks.
+- [x] Review whole diff for target Automatic, focus/Escape handling, shortcut scope, IME interaction, persistence, and draft/request protection. Fix material findings.
+- [x] Update README, roadmap, and Phase 6 verification in English then Japanese. Commit; leave branch unmerged.
 
 **Review focus:** Invalid saved target/favorites, variants in glossary matching, search after no results, Escape closing parent, duplicate window shortcuts, language changes during streaming/confirmation, and favorites stealing another app's input. Remaining physical IME/VoiceOver/AutoRaise and remote transport acceptance stays open for Phase 7. Do not start a heavy model for fixture checks.
 
@@ -42,20 +42,20 @@
 
 ### 第1作業：言語と設定
 
-- [ ] 検索・字体・Codable互換・旧設定・不正／重複／過大なお気に入り・空と再読込を先にテストする。
-- [ ] 言語一覧・検索・要求名と正規化したお気に入り保存を実装する。
-- [ ] 対象テストを通してコミットする。
+- [x] 検索・字体・Codable互換・旧設定・不正／重複／過大なお気に入り・空と再読込を先にテストする。
+- [x] 言語一覧・検索・要求名と正規化したお気に入り保存を実装する。
+- [x] 対象テストを通してコミットする。
 
 ### 第2作業：共通操作と保護
 
-- [ ] 新しい方向・実行中の要求情報・編集保持・古い確認・JSON/CSVの方向をテストする。
-- [ ] 言語選択・キーボード・お気に入りボタンと画面内ショートカット・設定の並べ替え・英日表示を実装する。
-- [ ] 背景テストと別保存先のDebugビルドを通してコミットする。
+- [x] 新しい方向・実行中の要求情報・編集保持・古い確認・JSON/CSVの方向をテストする。
+- [x] 言語選択・キーボード・お気に入りボタンと画面内ショートカット・設定の並べ替え・英日表示を実装する。
+- [x] 背景テストと別保存先のDebugビルドを通してコミットする。
 
 ### 第3作業：検証と記録
 
-- [ ] 可能な範囲でネイティブ操作、ループバック、翻訳キーと差分を検証し、制限を記録する。
-- [ ] 自動の誤選択・Esc・ショートカットの範囲・IME・設定保持・編集保護をレビューして重要な問題を修正する。
-- [ ] README・ロードマップ・検証記録を英語の後に日本語で更新し、コミットする。マージしない。
+- [x] 可能な範囲でネイティブ操作、ループバック、翻訳キーと差分を検証し、制限を記録する。
+- [x] 自動の誤選択・Esc・ショートカットの範囲・IME・設定保持・編集保護をレビューして重要な問題を修正する。
+- [x] README・ロードマップ・検証記録を英語の後に日本語で更新し、コミットする。マージしない。
 
 **重点:** 不正保存値・用語集の字体／地域区別・検索0件後・親画面を閉じないEsc・複数画面のショートカット・生成／確認中の言語変更・別アプリ入力。実IME／VoiceOver／AutoRaiseと遠隔接続の未確認事項は第7段階に残す。固定応答の検証では重いモデルを起動しない。
