@@ -37,7 +37,6 @@ struct ServerConfiguration: Equatable, Sendable {
     var chatURL: URL { baseURL.appendingPathComponent("chat/completions") }
 }
 
-enum TranslationLanguage: String, CaseIterable, Codable, Sendable { case automatic, english = "en", japanese = "ja" }
 enum TokenUpdate { case keep, replace(String), remove }
 
 @MainActor @Observable final class TranslationPreferences {
@@ -48,13 +47,29 @@ enum TokenUpdate { case keep, replace(String), remove }
         didSet { defaults.set(sourceLanguage.rawValue, forKey: "translation.sourceLanguage") }
     }
     var targetLanguage: TranslationLanguage {
-        didSet { defaults.set(targetLanguage.rawValue, forKey: "translation.targetLanguage") }
+        didSet {
+            if targetLanguage == .automatic { targetLanguage = oldValue }
+            defaults.set(targetLanguage.rawValue, forKey: "translation.targetLanguage")
+        }
+    }
+    var favoriteLanguages: [TranslationLanguage] {
+        didSet {
+            let normalized = Self.normalizedFavorites(favoriteLanguages)
+            if favoriteLanguages != normalized { favoriteLanguages = normalized }
+            defaults.set(favoriteLanguages.map(\.rawValue), forKey: "translation.favoriteLanguages")
+        }
+    }
+    private static func normalizedFavorites(_ languages: [TranslationLanguage]) -> [TranslationLanguage] {
+        var seen = Set<TranslationLanguage>()
+        return Array(languages.filter { $0 != .automatic && seen.insert($0).inserted }.prefix(5))
     }
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         sourceLanguage = defaults.string(forKey: "translation.sourceLanguage").flatMap(TranslationLanguage.init(rawValue:)) ?? .automatic
         let target = defaults.string(forKey: "translation.targetLanguage").flatMap(TranslationLanguage.init(rawValue:))
-        targetLanguage = target == .english ? .english : .japanese
+        targetLanguage = target.flatMap { $0 == .automatic ? nil : $0 } ?? .japanese
+        favoriteLanguages = Self.normalizedFavorites(defaults.stringArray(forKey: "translation.favoriteLanguages")?
+            .compactMap(TranslationLanguage.init(rawValue:)) ?? [.japanese, .english])
         if let endpoint = defaults.string(forKey: "translation.endpoint") {
             server = try? ServerConfiguration(endpoint: endpoint, model: defaults.string(forKey: "translation.model") ?? "",
                 allowHTTP: defaults.bool(forKey: "translation.allowHTTP"))

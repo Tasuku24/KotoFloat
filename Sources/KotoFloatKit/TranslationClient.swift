@@ -142,12 +142,6 @@ struct OpenAITranslationClient: TranslationServing {
     }
 }
 
-extension TranslationLanguage {
-    var promptName: String {
-        switch self { case .automatic: "the detected source language"; case .english: "English"; case .japanese: "Japanese" }
-    }
-}
-
 final class RejectTranslationRedirects: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
                     newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void) {
