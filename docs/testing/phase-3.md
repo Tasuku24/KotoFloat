@@ -22,18 +22,44 @@ Request IDs invalidate late callbacks after cancellation, replacement, manual en
 
 Requests occur only after connection checks, disclosed trial translations, or confirmed text using saved settings. Tokens belong to the normalized endpoint. A failed credential write leaves connection preferences unchanged. Blank token input preserves that endpoint's token; removal is explicit. Redirects, embedded URL credentials, queries, and fragments are rejected. Sessions disable cookies, credential storage, and caching; HTTPS uses system certificate validation.
 
-ATS permits custom HTTP endpoints because users choose their own servers. Application validation permits loopback HTTP automatically and requires explicit opt-in for other HTTP; opt-in does not encrypt data. Prefer HTTPS or a trusted VPN remotely. Real remote access and local-network permission remain unverified.
+ATS permits custom HTTP endpoints because users choose their own servers. Application validation permits loopback HTTP automatically and requires explicit opt-in for other HTTP; opt-in does not encrypt data. Prefer HTTPS or a trusted VPN remotely. Real HTTPS over Tailscale was verified below; signed-app local-network permission behavior was not exercised in this background pass.
 
 Limits: 128 KiB source input, 1 MiB model-list response, 4 MiB SSE input, and 1 MiB generated output. The inactivity timeout is 120 seconds and session resource timeout is 300 seconds. There are no automatic retries, cloud fallback, source/output logs, or history. The fixture binds only to `127.0.0.1` and does not log bodies or tokens.
 
-### Remaining acceptance
+### Host LLM verification (2026-11-01)
 
-- [ ] Actual app connection to LM Studio or another compatible LLM: model list, trial translation, and English/Japanese quality. A provisional model is sufficient.
-- [ ] Remote HTTPS/VPN, real authentication token, local-network permission, and Keychain save/read/delete in the signed app. Storage tests use an injected store, not the system Keychain.
+The user reported that the actual app already connected and its test succeeded. This additional background pass used the saved HTTPS Tailscale endpoint and `hy-mt2-7b`, with HTTP opt-in disabled. The host was online in Tailscale. The production URLSession client completed requests using system certificate validation, without a certificate override or redirect. The existing endpoint-scoped token was read through `KeychainCredentialStore` without prompting; it was never printed or written to a report. No app preferences, Keychain entries, personal glossaries, or server settings were changed. No app launch, restart, focus change, or input synthesis was used.
+
+**Five opt-in integration tests passed in 57.917 seconds**, sequentially through the production connection/translation models, client, and SSE decoder:
+
+- Model discovery and the connection settings' fixed trial translation completed. The selected model was present in the model list.
+- Missing and deliberately invalid tokens were rejected as authentication failures; the saved token allowed model discovery and generation.
+- Confirmed manual input generated a nonempty complete result. Generated/edited separation, Undo/Redo, edited-result copying to a named pasteboard, Keep editing, confirmed retranslation, document/undo reset, swap without sending, and clear confirmation passed.
+- Cancellation after an actual text callback raised `CancellationError`.
+- Eight recorded English/Japanese samples completed, including automatic source selection, two-paragraph text, and two glossary terms in each explicit direction. Glossary snapshots matched the selected entries, and no preferred term was missing.
+
+Manual content review found that all eight samples preserved meaning, numbers/units, target language, and paragraph breaks where present, with no prompt echo or unrelated explanation. Both glossary directions used the requested terms. Unit spacing was normalized in one Japanese paragraph sample (`5 V` to `5V`, `0.2 A` to `0.2A`). This is a small acceptance sample, not a general translation-quality benchmark. Source and output are in [host-llm-acceptance.json](host-llm-acceptance.json); only synthetic test sentences are recorded. Model file, quantization, context length, and host inference settings were not inspected or changed.
+
+To repeat against an already configured, authenticated server:
+
+```sh
+mkdir -p .build/host-llm-acceptance
+KOTOFLOAT_USE_SAVED_SERVER=1 KOTOFLOAT_EVALUATION_REPORT="$PWD/.build/host-llm-acceptance/content.json" nice -n 10 swift test --jobs 2 --skip PopupControllerTests --filter LocalModelIntegrationTests
+```
+
+This mode reads the app's saved endpoint/model and its Keychain token; isolated preferences, in-memory credentials, temporary glossaries, and named pasteboards own test changes. It requires a saved token and checks that the server rejects missing/invalid credentials. Without either `KOTOFLOAT_USE_SAVED_SERVER=1` or the existing `KOTOFLOAT_LOCAL_MODEL` opt-in, the real-model suite stays disabled. Output recording additionally requires `KOTOFLOAT_EVALUATION_REPORT`. The original loopback mode remains available. Test deadlines allow the production 300-second resource timeout to finish. Local logs are in the ignored `.build/host-llm-acceptance/` directory. No production code changed, so no additional app build was needed.
+
+The subsequent `python3 scripts/test_with_mock_server.py` background run passed: 129 tests reported, with the five opt-in real-model tests skipped and 124 executed. `git diff --check` also passed.
+
+### Acceptance status
+
+- [x] Real compatible host LLM: model list, trial translation, English/Japanese samples, and HTTPS over Tailscale with the existing token through the production client. The user separately reported successful app connection/testing.
+- [x] System Keychain read for the host endpoint and live rejection of missing/invalid credentials. Signed-app Keychain save/read/delete with a disposable loopback token was previously verified in [Phase 5](phase-5.md).
+- [ ] Independently observed remote signed-app desktop acceptance, including applicable permission behavior and credential persistence across restart. Personal host credentials were not deleted/replaced for testing.
 - [ ] Both UI languages, all five settings tabs without scrolling/clipping, streaming progress, completed-copy behavior, cancellation, and retranslation in the actual app.
 - [ ] Native-window tests and real Chrome/Preview selection, AutoRaise, focus/Escape, long output, and popup geometry. The running Phase 2 app was intentionally left untouched.
 
-Implementation and fixed-fixture evidence are ready. Real-server and desktop acceptance remain pending. This is an ad-hoc-signed, non-notarized development preview.
+Implementation, fixed-fixture evidence, and the intended host's production-client path are verified. The unchecked desktop criteria remain separate; earlier desktop evidence is recorded in [Phase 5](phase-5.md). This is an ad-hoc-signed, non-notarized development preview.
 
 ## 日本語
 
@@ -57,15 +83,41 @@ OpenAI互換のモデル一覧取得とChat Completionsのストリーミング�
 
 接続確認・明示した固定文の試し翻訳・保存設定を使った確定文章の翻訳でのみ通信します。トークンは正規化した接続先に属し、認証情報の保存失敗時は接続設定を維持します。トークンが空欄ならその接続先の保存済み値を維持し、削除は明示的な操作です。リダイレクト、URL中の認証情報、クエリ、フラグメントは拒否します。セッションではCookie・認証情報ストレージ・キャッシュを無効にし、HTTPSはシステムの証明書検証を使います。
 
-利用者がサーバーを選ぶため、ATSでは任意のHTTP接続先を扱えるようにしています。アプリ内の検証でループバックHTTPを自動許可し、それ以外には明示的な有効化を要求します。有効化しても暗号化されません。遠隔接続にはHTTPSまたは信頼するVPNを推奨します。実際の遠隔接続とローカルネットワーク権限は未確認です。
+利用者がサーバーを選ぶため、ATSでは任意のHTTP接続先を扱えるようにしています。アプリ内の検証でループバックHTTPを自動許可し、それ以外には明示的な有効化を要求します。有効化しても暗号化されません。遠隔接続にはHTTPSまたは信頼するVPNを推奨します。Tailscale経由の実HTTPS通信は以下で確認済みですが、署名済みアプリのローカルネットワーク権限の挙動は今回の背景検証で操作していません。
 
 上限は原文128 KiB、モデル一覧1 MiB、SSE入力4 MiB、生成文1 MiBです。応答が来ない場合は120秒、セッション全体は300秒でタイムアウトします。自動再試行、クラウドへの代替接続、原文・訳文ログ、履歴はありません。テスト用サーバーは `127.0.0.1` だけで待ち受け、本文やトークンを記録しません。
 
-### 今後必要な確認
+### ホストLLMでの検証（2026-11-01）
 
-- [ ] 実アプリからLM Studioなどへ接続し、モデル一覧・試し翻訳・英日品質を確認する。仮モデルでよい。
-- [ ] 遠隔HTTPS／VPN、実トークン、ローカルネットワーク権限、署名済みアプリのKeychain保存・読み取り・削除を確認する。保存テストは差し替えたストアを使用しており、システムKeychainの確認ではない。
+利用者から、実アプリで接続済みでテストも成功したとの報告を受けました。追加の背景検証では、保存済みのHTTPS／Tailscale接続先と`hy-mt2-7b`を使用し、HTTP許可は無効のままでした。Tailscaleでホストがオンラインであることも確認しました。本番URLSessionクライアントは、証明書の例外やリダイレクトなしでシステムの証明書検証を通して通信しました。既存の接続先別トークンは`KeychainCredentialStore`でダイアログを出さずに読み取り、表示・報告ファイルへの記録はしていません。アプリの設定、Keychain項目、個人用語集、サーバー設定は変更していません。アプリの起動・再起動、フォーカス変更、入力送出も行っていません。
+
+本番の接続・翻訳モデル、クライアント、SSEデコーダを順番に通し、**明示実行の統合テスト5件が57.917秒で成功**しました。
+
+- モデル一覧と接続設定の固定文の試し翻訳が完了し、選択モデルが一覧に含まれていました。
+- トークンなし・意図的に誤ったトークンは認証エラーとなり、保存済みトークンではモデル一覧と生成が成功しました。
+- 確定した手入力から空でない訳文が完了しました。生成訳と編集訳の区別、Undo/Redo、名前付きクリップボードへの編集訳コピー、編集続行、確認付き再翻訳、文書・Undoのリセット、送信しない入れ替え、クリア確認も成功しました。
+- 実際の文字列受信後に中断し、`CancellationError`になりました。
+- 自動判定、2段落の文章、明示した各方向で用語2件を含む英日8サンプルが完了しました。要求時の用語集は選択項目と一致し、指定訳語の不足はありませんでした。
+
+内容を目視評価し、8例とも意味、数値・単位、出力言語、原文にある段落区切りを維持し、指示文の繰り返しや無関係な説明はありませんでした。両方向の用語集も指定訳語を使用しました。日本語の段落例では単位前の空白が正規化されています（`5 V`→`5V`、`0.2 A`→`0.2A`）。少数の受け入れ例であり、モデル全体の翻訳品質のベンチマークではありません。原文と出力は[host-llm-acceptance.json](host-llm-acceptance.json)に記録し、合成したテスト文章だけを含めています。モデルファイル、量子化、コンテキスト長、ホストの推論設定は調査・変更していません。
+
+設定済みの認証付きサーバーで再実行する場合：
+
+```sh
+mkdir -p .build/host-llm-acceptance
+KOTOFLOAT_USE_SAVED_SERVER=1 KOTOFLOAT_EVALUATION_REPORT="$PWD/.build/host-llm-acceptance/content.json" nice -n 10 swift test --jobs 2 --skip PopupControllerTests --filter LocalModelIntegrationTests
+```
+
+アプリの保存済み接続先・モデルとKeychainトークンを読み取り、テストの変更は独立した設定・メモリ内認証情報・一時用語集・名前付きクリップボードで行います。保存済みトークンが必要で、トークンなし／誤った値をサーバーが拒否することも確認します。`KOTOFLOAT_USE_SAVED_SERVER=1`と既存の`KOTOFLOAT_LOCAL_MODEL`のどちらも指定しない通常のテストでは、実モデルのスイート全体を無効にします。出力記録にはさらに`KOTOFLOAT_EVALUATION_REPORT`が必要です。従来のループバック用モードも維持しました。テストの待機期限は本番の300秒の通信期限まで待てるようにしています。ローカルログは追跡対象外の`.build/host-llm-acceptance/`に保存しました。本番コードに変更がないため、アプリの追加ビルドは行っていません。
+
+その後の`python3 scripts/test_with_mock_server.py`による背景検証も成功しました。報告129件のうち、明示時だけ動く実モデル5件はスキップし、124件を実行しています。`git diff --check`も成功しました。
+
+### 受け入れ状況
+
+- [x] 本物の互換ホストLLMで、モデル一覧・試し翻訳・英日サンプル、既存トークンを用いたTailscale経由のHTTPS通信を本番クライアントで確認。実アプリの接続・テスト成功は、別途利用者から報告を受けています。
+- [x] ホスト接続先のシステムKeychain読み取りと、実際のトークンなし／誤った値の拒否を確認。署名済みアプリによる検証専用ループバックトークンの保存・再読み取り・削除は[第5段階](phase-5.md)で確認済みです。
+- [ ] 遠隔接続先での署名済みアプリの実画面を独立して確認すること。該当する権限の挙動や再起動後の認証維持を含みます。個人のホスト認証情報は検証のために削除・置換していません。
 - [ ] 英日UI、5つの設定タブがスクロール・欠けなしで収まること、進行表示、完了訳文のコピー、停止・再翻訳を実アプリで確認する。
 - [ ] ウィンドウ用テスト、実際のChrome・プレビューからの取得、AutoRaise、フォーカス・Esc、長文、位置・サイズを確認する。起動中の第2段階のアプリは意図的に変更していない。
 
-実装と固定応答での検証は整いました。実サーバー・実画面の確認は保留です。引き続きアドホック署名の、公証していない開発用プレビューです。
+実装、固定応答の検証、目的のホストへの本番クライアント経路は確認済みです。未チェックの実画面項目は別途残し、以前の実画面の証拠は[第5段階](phase-5.md)に記録しています。引き続きアドホック署名の、公証していない開発用プレビューです。
