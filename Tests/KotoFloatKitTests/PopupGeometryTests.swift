@@ -47,6 +47,7 @@ struct PopupGeometryTests {
             #expect(frame.height == 490)
             #expect(screen.contains(frame))
         }
+        #expect(frames[1].maxY == 584)
     }
 
     @Test func preservesInteractiveMinimumOnShortButUsableDisplay() {

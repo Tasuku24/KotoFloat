@@ -34,10 +34,10 @@
 
 **Interfaces:** Extend existing frame restoration/placement to cap height; expose the same screen-derived height limit to the native controller. Add optional favorite languages to the native picker without changing other callers.
 
-- [ ] Add failing regression tests for height caps across placements/display sizes and favorite ordering/search/exclusions.
-- [ ] Run the background suite; confirm only the new expectations fail.
-- [ ] Implement geometry bounds and picker ordering, then run the background suite.
-- [ ] Commit the verified slice.
+- [x] Add failing regression tests for height caps across placements/display sizes and favorite ordering/search/exclusions.
+- [x] Run the background suite; confirm only the new expectations fail.
+- [x] Implement geometry bounds and picker ordering, then run the background suite.
+- [x] Commit the verified slice.
 
 ### Task 2: Translation-first presentation and complete action access
 
@@ -45,11 +45,11 @@
 
 **Interfaces:** Consume Task 1's bounded geometry and optional picker favorites. Reuse TranslationModel, capture states, confirmation view, glossary selection, and focused shortcut control without changing request ownership.
 
-- [ ] Replace the captured-state controls/source preview with a compact top row and result-first scroll view; reset source/details for new documents.
-- [ ] Keep all existing actions reachable through the more menu or existing dedicated windows, with state-specific warnings/recovery outside hidden details.
-- [ ] Align the sample popup with the result-first layout; use solid system backgrounds and retain the native close button.
-- [ ] Run the background suite and Debug build sequentially; check localization parity and diff whitespace.
-- [ ] Record proof and remaining live acceptance checks, review the whole branch, and commit the verified result.
+- [x] Replace the captured-state controls/source preview with a compact top row and result-first scroll view; reset source/details for new documents.
+- [x] Keep all existing actions reachable through the more menu or existing dedicated windows, with state-specific warnings/recovery outside hidden details.
+- [x] Align the sample popup with the result-first layout; use solid system backgrounds and retain the native close button.
+- [x] Run the background suite and Debug build sequentially; check localization parity and diff whitespace.
+- [x] Record proof and remaining live acceptance checks, review the whole branch, and commit the verified result.
 
 ## 日本語
 
@@ -71,15 +71,15 @@
 
 ### タスク1: サイズ制限と言語選択内のお気に入り
 
-- [ ] サイズ制限とお気に入りの順序・検索・除外について、先に失敗する回帰テストを書く。
-- [ ] バックグラウンドテストで、新しい期待のみが失敗することを確認する。
-- [ ] 既存の枠復元・配置・コントローラと言語選択を拡張して、同テストを通す。
-- [ ] 検証済みの変更をコミットする。
+- [x] サイズ制限とお気に入りの順序・検索・除外について、先に失敗する回帰テストを書く。
+- [x] バックグラウンドテストで、新しい期待のみが失敗することを確認する。
+- [x] 既存の枠復元・配置・コントローラと言語選択を拡張して、同テストを通す。
+- [x] 検証済みの変更をコミットする。
 
 ### タスク2: 訳文優先の表示と既存操作への経路
 
-- [ ] 上部の操作列と訳文優先のスクロール表示を実装し、新しい文書で原文・詳細を閉じる。
-- [ ] 既存機能をメニューまたは専用画面に残し、必要な注意・復旧操作を隠さない。
-- [ ] サンプルも同じ表示方針に揃え、通常の背景と標準の閉じるボタンを使う。
-- [ ] バックグラウンドテスト、Debugビルド、翻訳キーの一致、空白チェックを実行する。
-- [ ] 検証結果と実画面の残確認を記録し、全体レビュー後にコミットする。
+- [x] 上部の操作列と訳文優先のスクロール表示を実装し、新しい文書で原文・詳細を閉じる。
+- [x] 既存機能をメニューまたは専用画面に残し、必要な注意・復旧操作を隠さない。
+- [x] サンプルも同じ表示方針に揃え、通常の背景と標準の閉じるボタンを使う。
+- [x] バックグラウンドテスト、Debugビルド、翻訳キーの一致、空白チェックを実行する。
+- [x] 検証結果と実画面の残確認を記録し、全体レビュー後にコミットする。

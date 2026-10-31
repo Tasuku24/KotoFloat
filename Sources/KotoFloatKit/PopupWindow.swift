@@ -40,7 +40,7 @@ final class PopupPanel: NSPanel {
 enum PopupWindowFactory {
     static func make(mode: PopupFocusMode) -> NSWindow {
         let frame = CGRect(origin: .zero, size: PopupGeometry.defaultSize)
-        let style: NSWindow.StyleMask = [.titled, .closable, .resizable]
+        let style: NSWindow.StyleMask = [.titled, .closable, .resizable, .fullSizeContentView]
         let window: NSWindow
         switch mode {
         case .standard:
@@ -54,6 +54,8 @@ enum PopupWindowFactory {
             window = PopupWindow(contentRect: frame, styleMask: style, backing: .buffered, defer: false)
         }
         window.title = "KotoFloat"
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
         window.identifier = NSUserInterfaceItemIdentifier("translationPopup")
         window.isReleasedWhenClosed = false
         window.hidesOnDeactivate = false

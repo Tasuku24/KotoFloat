@@ -27,9 +27,12 @@ enum PopupGeometry {
     }
 
     static func nearPointer(size: CGSize, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        guard let screen = screen(at: pointer, in: screens.filter(isUsable)) else {
+            return CGRect(x: pointer.x + 16, y: pointer.y - size.height - 16, width: size.width, height: size.height)
+        }
+        let size = boundedSize(size, to: screen)
         let frame = CGRect(x: pointer.x + 16, y: pointer.y - size.height - 16,
                            width: size.width, height: size.height)
-        guard let screen = screen(at: pointer, in: screens.filter(isUsable)) else { return frame }
         return clamp(frame, to: screen)
     }
 
@@ -44,6 +47,7 @@ enum PopupGeometry {
               intersectionArea(selection, screen) > 0 else {
             return nearPointer(size: size, screens: screens, pointer: pointer)
         }
+        let size = boundedSize(size, to: screen)
         let candidates = [
             CGRect(x: selection.maxX + 16, y: selection.maxY - size.height, width: size.width, height: size.height),
             CGRect(x: selection.minX - size.width - 16, y: selection.maxY - size.height, width: size.width, height: size.height),
@@ -64,10 +68,14 @@ enum PopupGeometry {
     }
 
     private static func clamp(_ frame: CGRect, to screen: CGRect) -> CGRect {
-        let width = min(max(frame.width, minimumSize.width), screen.width)
-        let height = min(max(frame.height, minimumSize.height), maximumHeight(on: screen))
-        return CGRect(x: min(max(frame.minX, screen.minX), screen.maxX - width),
-                      y: min(max(frame.minY, screen.minY), screen.maxY - height),
-                      width: width, height: height)
+        let size = boundedSize(frame.size, to: screen)
+        return CGRect(x: min(max(frame.minX, screen.minX), screen.maxX - size.width),
+                      y: min(max(frame.minY, screen.minY), screen.maxY - size.height),
+                      width: size.width, height: size.height)
+    }
+
+    private static func boundedSize(_ size: CGSize, to screen: CGRect) -> CGSize {
+        CGSize(width: min(max(size.width, minimumSize.width), screen.width),
+               height: min(max(size.height, minimumSize.height), maximumHeight(on: screen)))
     }
 }

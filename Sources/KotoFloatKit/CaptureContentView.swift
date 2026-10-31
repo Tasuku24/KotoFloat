@@ -32,28 +32,19 @@ struct CaptureContentView: View {
     let openSettings: () -> Void
     var openGlossaries: () -> Void = {}
     var openEditor: () -> Void = {}
-    @State private var sourceExpanded = false
+    @State private var showsSource = false
+    @State private var showsDetails = false
     @FocusState private var manualFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Label(L10n.text("capture.title"), systemImage: "text.viewfinder")
-                    .font(.subheadline.weight(.semibold))
-                Spacer(minLength: 0)
-                Button(action: toggleTopmost) {
-                    Image(systemName: preferences.alwaysOnTop ? "pin.fill" : "pin")
-                }
-                .accessibilityLabel(L10n.text("settings.topmost"))
-                .accessibilityValue(L10n.text(preferences.alwaysOnTop ? "state.on" : "state.off"))
-                .help(L10n.text("settings.topmost"))
-                Button(action: openSettings) { Image(systemName: "gearshape") }
-                    .accessibilityLabel(L10n.text("menu.settings"))
-                    .help(L10n.text("menu.settings"))
-            }
-            .buttonStyle(.borderless)
-            .padding(.horizontal, 18).padding(.vertical, 12)
+            TranslationPopupToolbar(capture: model, preferences: preferences, translation: translation,
+                showsSource: $showsSource, showsDetails: $showsDetails, toggleTopmost: toggleTopmost,
+                openSettings: openSettings, openGlossaries: openGlossaries, openEditor: openEditor)
             Divider()
+            if case .captured = model.state, let translation {
+                PopupTranslationStatusView(model: translation, openSettings: openSettings) { showsDetails = true }
+            }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     content
@@ -62,27 +53,19 @@ struct CaptureContentView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("captureScrollView")
-            Divider()
-            VStack(spacing: 10) {
-                if let translation { TranslationConfirmationView(model: translation) }
-                if case .captured = model.state, let translation {
-                    TranslationActionsView(model: translation)
-                }
-                HStack {
-                    if translation != nil {
-                        Button(L10n.text("menu.editor"), action: openEditor).controlSize(.small)
-                    }
-                    if model.state != .manual {
-                        Button(L10n.text("capture.manual")) { model.beginManualEntry() }
-                            .controlSize(.small)
-                    }
-                    Spacer()
-                    Text(L10n.text("sample.escapeHint")).font(.caption).foregroundStyle(.secondary)
-                }
+            .id(translation?.documentID)
+            if let translation, translation.pendingAction != nil {
+                Divider()
+                TranslationConfirmationView(model: translation)
+                    .padding(12)
             }
-            .padding(.horizontal, 18).padding(.vertical, 10)
         }
         .background(.background)
+        .ignoresSafeArea(.container, edges: .top)
+        .onChange(of: translation?.documentID) { resetDisclosure() }
+        .onChange(of: model.state) {
+            if model.state == .capturing || model.state == .manual { resetDisclosure() }
+        }
     }
 
     @ViewBuilder private var content: some View {
@@ -93,21 +76,23 @@ struct CaptureContentView: View {
             ProgressView(L10n.text("capture.working"))
         case .captured(let text):
             if let translation {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(translation.sourceApplicationName ?? L10n.text("capture.manualSource"))
-                        .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
-                    if sourceExpanded {
-                        Text(translation.sourceText).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(String(translation.sourceText.prefix(300))).lineLimit(3).textSelection(.enabled)
-                    }
-                    Button(L10n.text(sourceExpanded ? "editor.collapseSource" : "editor.expandSource")) {
-                        sourceExpanded.toggle()
-                    }.controlSize(.small)
+                if !translation.resultText.isEmpty {
+                    Text(translation.resultText)
+                        .font(.system(size: 17)).lineSpacing(6)
+                        .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("translationOutput")
+                }
+                if showsSource {
+                    Divider()
+                    Text(L10n.text("editor.source")).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(translation.sourceText).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                }
+                if showsDetails {
+                    Divider()
+                    TranslationStatusView(model: translation, openSettings: openSettings)
+                    TranslationGlossaryDetailsView(model: translation)
                 }
             } else { sourceText(text) }
-            Divider()
-            if let translation { TranslationContentView(model: translation, openSettings: openSettings, openGlossaries: openGlossaries) }
         case .needsConfirmation(let text):
             sourceText(text)
             Text(L10n.text("capture.confirmHint")).font(.callout)
@@ -118,6 +103,7 @@ struct CaptureContentView: View {
                 .font(.headline)
             Text(L10n.text("capture.error.\(failure.rawValue)"))
             if failure == .permissionRequired { AccessibilityPermissionView() }
+            Button(L10n.text("capture.manual")) { model.beginManualEntry() }
         case .manual:
             Text(L10n.text("capture.manualHint")).font(.callout)
             TextEditor(text: $model.manualText)
@@ -131,6 +117,11 @@ struct CaptureContentView: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(model.manualText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
+    }
+
+    private func resetDisclosure() {
+        showsSource = false
+        showsDetails = false
     }
 
     private func sourceText(_ text: CapturedText) -> some View {

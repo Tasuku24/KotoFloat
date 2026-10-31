@@ -5,39 +5,45 @@ struct PopupContentView: View {
     let sample: SampleContent
     let toggleTopmost: () -> Void
     let openSettings: () -> Void
+    @State private var showsSource = false
+    @State private var copied = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
-                Label(L10n.text("sample.badge"), systemImage: "text.bubble")
-                    .font(.subheadline.weight(.semibold))
-                Text(L10n.text("sample.languages"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer(minLength: 0)
+            PopupToolbar {
+                Text(TranslationLanguage.japanese.title).foregroundStyle(.secondary)
                 Button {
-                    toggleTopmost()
+                    NSPasteboard.general.clearContents()
+                    copied = NSPasteboard.general.setString(sample.translation, forType: .string)
                 } label: {
-                    Image(systemName: preferences.alwaysOnTop ? "pin.fill" : "pin")
-                        .foregroundStyle(preferences.alwaysOnTop ? Color.accentColor : .secondary)
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc").frame(width: 26, height: 28)
                 }
-                .help(L10n.text("settings.topmost"))
-                .accessibilityLabel(L10n.text("settings.topmost"))
-                .accessibilityValue(L10n.text(preferences.alwaysOnTop ? "state.on" : "state.off"))
-                Button { openSettings() } label: {
-                    Image(systemName: "gearshape")
+                .help(L10n.text(copied ? "translation.copied" : "translation.copy"))
+                .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
+                Menu {
+                    Button(L10n.text(sample.isLong ? "sample.short" : "sample.long")) { sample.isLong.toggle() }
+                    Toggle(L10n.text("popup.showSource"), isOn: $showsSource)
+                    Toggle(L10n.text("settings.topmost"), isOn: Binding(
+                        get: { preferences.alwaysOnTop },
+                        set: { if $0 != preferences.alwaysOnTop { toggleTopmost() } }))
+                    Button(L10n.text("menu.settings"), action: openSettings)
+                } label: {
+                    Image(systemName: "ellipsis").frame(width: 26, height: 28)
                 }
-                .help(L10n.text("menu.settings"))
-                .accessibilityLabel(L10n.text("menu.settings"))
+                .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
+                .help(L10n.text("popup.more"))
+                .accessibilityLabel(L10n.text("popup.more"))
             }
-            .buttonStyle(.borderless)
-            .padding(.horizontal, 18).padding(.vertical, 12)
 
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    textSection(title: "sample.source", text: sample.source, isTranslation: false)
-                    Divider()
-                    textSection(title: "sample.translation", text: sample.translation, isTranslation: true)
+                    Text(sample.translation).font(.system(size: 17)).lineSpacing(6)
+                        .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+                    if showsSource {
+                        Divider()
+                        textSection(title: "sample.source", text: sample.source, isTranslation: false)
+                    }
                     Text(L10n.text("sample.notice"))
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -47,19 +53,10 @@ struct PopupContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("sampleScrollView")
 
-            Divider()
-            HStack {
-                Button(L10n.text(sample.isLong ? "sample.short" : "sample.long")) {
-                    sample.isLong.toggle()
-                }
-                .controlSize(.small)
-                Spacer()
-                Text(L10n.text("sample.escapeHint"))
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 18).padding(.vertical, 10)
         }
         .background(.background)
+        .ignoresSafeArea(.container, edges: .top)
+        .onChange(of: sample.isLong) { copied = false }
     }
 
     private func textSection(title: String, text: String, isTranslation: Bool) -> some View {

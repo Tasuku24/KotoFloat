@@ -241,3 +241,8 @@
 "language.moveUp" = "Move %@ up";
 "language.moveDown" = "Move %@ down";
 "language.favoritesHint" = "Choose up to five languages in shortcut order. Command-1–5 works only in the focused popup or editor. Switching languages keeps your text; press Retranslate to apply.";
+
+"popup.toolbar" = "Translation controls";
+"popup.more" = "More actions";
+"popup.showSource" = "Show original text";
+"popup.showDetails" = "Show result details";

@@ -241,3 +241,7 @@
 "language.moveUp" = "%@を上へ移動";
 "language.moveDown" = "%@を下へ移動";
 "language.favoritesHint" = "ショートカット順に最大5言語を登録できます。Command-1〜5はフォーカス中のポップアップかエディタ内だけで動作します。言語を変えても文章は保持され、再翻訳で適用します。";
+"popup.toolbar" = "翻訳の操作";
+"popup.more" = "その他の操作";
+"popup.showSource" = "原文を表示";
+"popup.showDetails" = "結果の詳細を表示";
