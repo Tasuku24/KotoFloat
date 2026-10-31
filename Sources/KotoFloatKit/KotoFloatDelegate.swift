@@ -126,7 +126,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         let item = statusItem ?? NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let image = Bundle.module.url(forResource: "MenuBarIcon", withExtension: "pdf")
             .flatMap { NSImage(contentsOf: $0) }
-        image?.size = NSSize(width: 18, height: 18)
+        image?.size = NSSize(width: 16, height: 16)
         image?.isTemplate = true
         image?.accessibilityDescription = "KotoFloat"
         item.button?.image = image ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
