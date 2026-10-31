@@ -228,3 +228,16 @@
 "editor.quitMessage" = "Untranslated source changes and edited translations are only held in memory. Copy anything you want to keep before quitting.";
 "editor.expandSource" = "Show full source";
 "editor.collapseSource" = "Collapse source";
+
+"language.search" = "Search languages";
+"language.results" = "Languages";
+"language.noResults" = "No languages found.";
+"language.modelHint" = "These are selectable languages. Translation quality depends on your configured model.";
+"language.favorites" = "Favorite target languages";
+"language.favoriteSelect" = "Translate into %@ (Command-%d)";
+"language.selected" = "Selected";
+"language.add" = "Add favorite language…";
+"language.remove" = "Remove %@ from favorites";
+"language.moveUp" = "Move %@ up";
+"language.moveDown" = "Move %@ down";
+"language.favoritesHint" = "Choose up to five languages in shortcut order. Command-1–5 works only in the focused popup or editor. Switching languages keeps your text; press Retranslate to apply.";

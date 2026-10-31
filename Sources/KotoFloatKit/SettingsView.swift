@@ -31,10 +31,15 @@ struct SettingsView: View {
                 case .capture: captureSettings
                 case .connection: ConnectionSettingsView(model: connection)
                 case .translation:
-                    settingsGroup("translation.direction") {
-                        TranslationDirectionView(preferences: connection.preferences)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 12) {
+                            settingsGroup("translation.direction") {
+                                TranslationDirectionView(preferences: connection.preferences)
+                            }
+                            FavoriteLanguagesSettings(preferences: connection.preferences)
+                            note("translation.privacy")
+                        }
                     }
-                    note("translation.privacy")
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

@@ -5,6 +5,127 @@ import Testing
 
 @Suite(.serialized) @MainActor
 struct PopupControllerTests {
+    @Test func favoriteShortcutsRequireTheirOwnKeyWindowAndExactModifiers() throws {
+        try withTranslationDefaults { defaults in
+            let preferences = TranslationPreferences(defaults: defaults)
+            preferences.favoriteLanguages = [.french, .german]
+            let window = PopupWindowFactory.make(mode: .standard)
+            let control = FavoriteShortcutControl(preferences: preferences)
+            window.contentView = control
+            defer { window.close() }
+            window.makeKeyAndOrderFront(nil)
+            #expect(window.isKeyWindow)
+            @MainActor func event(_ characters: String, modifiers: NSEvent.ModifierFlags = .command, number: Int? = nil) throws -> NSEvent {
+                let windowNumber = number ?? window.windowNumber
+                return try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers,
+                    timestamp: 0, windowNumber: windowNumber, context: nil,
+                    characters: characters, charactersIgnoringModifiers: characters, isARepeat: false, keyCode: 18))
+            }
+            let one = try event("1")
+            let two = try event("2")
+            let three = try event("3")
+            let shifted = try event("1", modifiers: [.command, .shift])
+            let other = try event("1", number: 0)
+            #expect(control.handle(one))
+            #expect(preferences.targetLanguage == .french)
+            preferences.targetLanguage = .japanese
+            NSApp.sendEvent(one)
+            #expect(preferences.targetLanguage == .french)
+            control.removeFromSuperview()
+            preferences.targetLanguage = .japanese
+            NSApp.sendEvent(one)
+            #expect(preferences.targetLanguage == .japanese)
+            window.contentView = control
+            #expect(control.handle(two))
+            #expect(preferences.targetLanguage == .german)
+            #expect(!control.handle(three))
+            #expect(!control.handle(shifted))
+            #expect(!control.handle(other))
+            window.resignKey()
+            #expect(!control.handle(one))
+            #expect(preferences.targetLanguage == .german)
+        }
+    }
+
+    @Test func favoriteBarInstallsItsShortcutInsideTheHostedWindow() throws {
+        try withTranslationDefaults { defaults in
+            let preferences = TranslationPreferences(defaults: defaults)
+            preferences.favoriteLanguages = [.french, .german]
+            let window = PopupWindowFactory.make(mode: .standard)
+            window.contentView = NSHostingView(rootView: FavoriteLanguageBar(preferences: preferences))
+            defer { window.close() }
+            window.makeKeyAndOrderFront(nil)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                modifierFlags: .command, timestamp: 0, windowNumber: window.windowNumber, context: nil,
+                characters: "2", charactersIgnoringModifiers: "2", isARepeat: false, keyCode: 19))
+            NSApp.sendEvent(event)
+            #expect(preferences.targetLanguage == .german)
+        }
+    }
+
+    @Test func nativeLanguagePopoverEscapeKeepsParentAndFrameIntact() throws {
+        try withController { controller in
+            controller.showSample()
+            try focus(controller.panel)
+            let parentFrame = controller.panel.frame
+            let anchor = NSButton(title: "Language", target: nil, action: nil)
+            anchor.frame = CGRect(x: 20, y: 20, width: 150, height: 30)
+            controller.panel.contentView?.addSubview(anchor)
+            let coordinator = LanguagePicker.Coordinator()
+            var selected: TranslationLanguage?
+            coordinator.picker = LanguagePicker(label: "Target", selection: .japanese) { selected = $0 }
+            coordinator.open(anchor)
+            #expect(coordinator.popover.isShown)
+            let picker = try #require(coordinator.popover.contentViewController as? LanguagePickerController)
+            let pickerWindow = try #require(picker.view.window)
+            let event = try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,
+                modifierFlags: [], timestamp: 0, windowNumber: pickerWindow.windowNumber,
+                context: nil, characters: "\u{1b}", charactersIgnoringModifiers: "\u{1b}", isARepeat: false, keyCode: 53))
+            pickerWindow.sendEvent(event)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            #expect(!coordinator.popover.isShown)
+            #expect(controller.panel.isVisible)
+            #expect(controller.panel.frame == parentFrame)
+            #expect(selected == nil)
+        }
+    }
+
+    @Test func nativeLanguageSearchArrowsAndReturnSelectWithoutChangingParent() throws {
+        try withController { controller in
+            controller.showSample()
+            try focus(controller.panel)
+            let parentFrame = controller.panel.frame
+            let anchor = NSButton(title: "Language", target: nil, action: nil)
+            anchor.frame = CGRect(x: 20, y: 20, width: 150, height: 30)
+            controller.panel.contentView?.addSubview(anchor)
+            let coordinator = LanguagePicker.Coordinator()
+            var selected: TranslationLanguage?
+            coordinator.picker = LanguagePicker(label: "Target", selection: .japanese) { selected = $0 }
+            coordinator.open(anchor)
+            let picker = try #require(coordinator.popover.contentViewController as? LanguagePickerController)
+            let pickerWindow = try #require(picker.view.window)
+            let editor = try #require(pickerWindow.firstResponder as? NSTextView)
+            editor.insertText("pt", replacementRange: NSRange(location: NSNotFound, length: 0))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            #expect(picker.results == [.portugueseBrazil, .portuguesePortugal])
+            let pickerWindowNumber = pickerWindow.windowNumber
+            func key(_ characters: String, _ code: UInt16) throws -> NSEvent {
+                try #require(NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                    windowNumber: pickerWindowNumber, context: nil, characters: characters,
+                    charactersIgnoringModifiers: characters, isARepeat: false, keyCode: code))
+            }
+            pickerWindow.sendEvent(try key("\u{f701}", 125))
+            #expect(selected == nil)
+            pickerWindow.sendEvent(try key("\r", 36))
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+            #expect(selected == .portuguesePortugal)
+            #expect(!coordinator.popover.isShown)
+            #expect(controller.panel.isVisible)
+            #expect(controller.panel.frame == parentFrame)
+        }
+    }
+
     @Test func compatibilityModeExposesStandardMainCapableWindow() throws {
         try withController { controller in
             controller.setFocusMode(.autoRaiseCompatible)

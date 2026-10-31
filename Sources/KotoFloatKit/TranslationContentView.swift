@@ -4,16 +4,17 @@ struct TranslationDirectionView: View {
     @Bindable var preferences: TranslationPreferences
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker(L10n.text("translation.from"), selection: $preferences.sourceLanguage) {
-                ForEach(TranslationLanguage.allCases, id: \.self) { language in
-                    Text(L10n.text("translation.language.\(language.rawValue)")).tag(language)
+            HStack {
+                Text(L10n.text("translation.from"))
+                LanguagePicker(label: L10n.text("translation.from"), selection: preferences.sourceLanguage,
+                    includeAutomatic: true) { preferences.sourceLanguage = $0 }
+            }.frame(height: 26)
+            HStack {
+                Text(L10n.text("translation.to"))
+                LanguagePicker(label: L10n.text("translation.to"), selection: preferences.targetLanguage) {
+                    preferences.targetLanguage = $0
                 }
-            }
-            Picker(L10n.text("translation.to"), selection: $preferences.targetLanguage) {
-                ForEach([TranslationLanguage.english, .japanese], id: \.self) { language in
-                    Text(L10n.text("translation.language.\(language.rawValue)")).tag(language)
-                }
-            }
+            }.frame(height: 26)
             Text(L10n.text("translation.directionHint"))
                 .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
@@ -27,6 +28,7 @@ struct TranslationContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             TranslationDirectionView(preferences: model.preferences).controlSize(.small)
+            FavoriteLanguageBar(preferences: model.preferences)
             TranslationGlossaryView(model: model, openGlossaries: openGlossaries)
             TranslationStatusView(model: model, openSettings: openSettings)
             if model.hasEdits {
@@ -106,8 +108,8 @@ struct TranslationStatusView: View {
             }
             if let input = model.input {
                 Text(String(format: L10n.text("editor.requestDirection"),
-                    L10n.text("translation.language.\(input.source.rawValue)"),
-                    L10n.text("translation.language.\(input.target.rawValue)")))
+                    input.source.title,
+                    input.target.title))
                     .font(.caption).foregroundStyle(.secondary)
             }
             if model.sourceText.utf8.count > 131_072 {

@@ -57,4 +57,64 @@ import Testing
             #expect(preferences.targetLanguage == .japanese)
         }
     }
+    @Test func everySelectableLanguageBuildsAnExplicitPromptAndGlossaryRoundTrips() throws {
+        let client = OpenAITranslationClient(server: try ServerConfiguration(endpoint: "https://fixture.invalid", model: "fixture"), token: nil)
+        for language in TranslationLanguage.targets {
+            let request = try client.request(for: TranslationInput(text: "Synthetic text", source: .automatic, target: language))
+            let body = try #require(request.httpBody)
+            let json = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            let messages = try #require(json["messages"] as? [[String: String]])
+            #expect(messages[0]["content"]?.contains("into \(language.promptName).") == true)
+            let entry = GlossaryEntry(sourceTerm: "term", preferredTranslation: "preferred", sourceLanguage: language == .english ? .japanese : .english, targetLanguage: language)
+            let library = try GlossaryLibrary(glossaries: [Glossary(name: "Fixture", entries: [entry])]).validated()
+            #expect(try JSONDecoder().decode(GlossaryLibrary.self, from: JSONEncoder().encode(library)) == library)
+            let preview = GlossaryCSV.preview(data: GlossaryCSV.export([entry]), existing: [], policy: .keepBoth)
+            #expect(preview.canImport)
+            #expect(preview.entries.first?.targetLanguage == language)
+        }
+        let entry = GlossaryEntry(sourceTerm: "voltage", preferredTranslation: "電壓", sourceLanguage: .english, targetLanguage: .chineseTraditional)
+        let glossary = Glossary(name: "Fixture", entries: [entry])
+        #expect(GlossaryMatcher.context(for: "voltage", source: .english, target: .chineseTraditional, glossary: glossary).entries == [entry])
+        #expect(GlossaryMatcher.context(for: "voltage", source: .english, target: .chineseSimplified, glossary: glossary).entries.isEmpty)
+    }
+
+    @Test func languageSwitchKeepsActiveRequestAndEditedDraftUntilExplicitRetranslation() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.start(text: CapturedText(text: "Synthetic", source: nil, bounds: nil, method: .manual))
+            await waitFor { await service.count == 1 }
+            preferences.targetLanguage = .chineseTraditional
+            #expect(model.input?.target == .japanese)
+            #expect(model.directionChanged)
+            await service.emit("Generated", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            model.editTranslation("Keep my edit")
+            let document = model.documentID
+            preferences.targetLanguage = .portugueseBrazil
+            #expect(model.resultText == "Keep my edit")
+            #expect(model.documentID == document)
+            #expect(model.canUndo)
+            #expect(await service.count == 1)
+            model.retranslate()
+            preferences.targetLanguage = .french
+            model.confirmPendingAction()
+            #expect(await service.count == 1)
+            #expect(model.resultText == "Keep my edit")
+            model.retranslate()
+            preferences.favoriteLanguages = [.french, .german]
+            model.confirmPendingAction()
+            await waitFor { await service.count == 2 }
+            #expect(await service.inputs.last?.target == .french)
+            await service.emit("New generation", at: 1)
+            await service.finish(at: 1)
+            await waitFor { model.state == .completed }
+            #expect(model.output == "New generation")
+            await service.emit(" stale", at: 0)
+            #expect(model.output == "New generation")
+        }
+    }
+
 }

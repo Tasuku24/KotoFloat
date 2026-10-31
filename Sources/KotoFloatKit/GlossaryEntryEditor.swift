@@ -13,13 +13,15 @@ struct GlossaryEntryEditor: View {
             Form {
                 TextField(L10n.text("glossary.source"), text: $entry.sourceTerm)
                 TextField(L10n.text("glossary.target"), text: $entry.preferredTranslation)
-                Picker(L10n.text("translation.from"), selection: $entry.sourceLanguage) {
-                    Text(L10n.text("translation.language.en")).tag(TranslationLanguage.english)
-                    Text(L10n.text("translation.language.ja")).tag(TranslationLanguage.japanese)
+                LabeledContent(L10n.text("translation.from")) {
+                    LanguagePicker(label: L10n.text("translation.from"), selection: entry.sourceLanguage) {
+                        entry.sourceLanguage = $0
+                    }.frame(height: 26)
                 }
-                Picker(L10n.text("translation.to"), selection: $entry.targetLanguage) {
-                    Text(L10n.text("translation.language.en")).tag(TranslationLanguage.english)
-                    Text(L10n.text("translation.language.ja")).tag(TranslationLanguage.japanese)
+                LabeledContent(L10n.text("translation.to")) {
+                    LanguagePicker(label: L10n.text("translation.to"), selection: entry.targetLanguage) {
+                        entry.targetLanguage = $0
+                    }.frame(height: 26)
                 }
                 Toggle(L10n.text("glossary.caseSensitive"), isOn: $entry.caseSensitive)
                 Toggle(L10n.text("glossary.enabled"), isOn: $entry.enabled)

@@ -61,7 +61,7 @@ struct GlossaryView: View {
                         Table(filteredEntries, selection: $selectedEntryID) {
                             TableColumn(L10n.text("glossary.source"), value: \.sourceTerm)
                             TableColumn(L10n.text("glossary.target"), value: \.preferredTranslation)
-                            TableColumn(L10n.text("glossary.direction")) { Text("\($0.sourceLanguage.rawValue) → \($0.targetLanguage.rawValue)") }.width(65)
+                            TableColumn(L10n.text("glossary.direction")) { Text("\($0.sourceLanguage.rawValue) → \($0.targetLanguage.rawValue)") }.width(min: 90, ideal: 140)
                             TableColumn(L10n.text("glossary.context"), value: \.context)
                             TableColumn(L10n.text("glossary.enabled")) { Text(L10n.text($0.enabled ? "state.on" : "state.off")) }.width(55)
                         }

@@ -27,6 +27,7 @@ struct TranslationEditorView: View {
             }.padding(16)
             Divider()
             direction.padding(.horizontal, 16).padding(.vertical, 12)
+            FavoriteLanguageBar(preferences: model.preferences).padding(.horizontal, 16).padding(.bottom, 8)
             ScrollView {
                 VStack(alignment: .leading, spacing: 8) {
                     TranslationGlossaryView(model: model, openGlossaries: openGlossaries)
@@ -78,23 +79,24 @@ struct TranslationEditorView: View {
     }
 
     private var direction: some View {
-        @Bindable var preferences = model.preferences
+        let preferences = model.preferences
         return HStack(spacing: 16) {
-            Picker(L10n.text("translation.from"), selection: $preferences.sourceLanguage) {
-                ForEach(TranslationLanguage.allCases, id: \.self) { language in
-                    Text(L10n.text("translation.language.\(language.rawValue)")).tag(language)
-                }
+            HStack {
+                Text(L10n.text("translation.from"))
+                LanguagePicker(label: L10n.text("translation.from"), selection: preferences.sourceLanguage,
+                    includeAutomatic: true) { preferences.sourceLanguage = $0 }
             }.frame(maxWidth: .infinity)
             Button { model.swapLanguages() } label: { Image(systemName: "arrow.left.arrow.right") }
                 .disabled(!model.canSwapLanguages)
                 .accessibilityLabel(L10n.text("editor.swap"))
                 .help(L10n.text("editor.swapHint"))
-            Picker(L10n.text("translation.to"), selection: $preferences.targetLanguage) {
-                ForEach([TranslationLanguage.english, .japanese], id: \.self) { language in
-                    Text(L10n.text("translation.language.\(language.rawValue)")).tag(language)
+            HStack {
+                Text(L10n.text("translation.to"))
+                LanguagePicker(label: L10n.text("translation.to"), selection: preferences.targetLanguage) {
+                    preferences.targetLanguage = $0
                 }
             }.frame(maxWidth: .infinity)
-        }
+        }.frame(height: 28)
     }
 
     private func editor(text: String, editable: Bool, label: String, onChange: @escaping (String) -> Void) -> some View {

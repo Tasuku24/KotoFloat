@@ -228,3 +228,16 @@
 "editor.quitMessage" = "未翻訳の原文変更と編集した訳文はメモリ内だけに保持されています。残したい内容は終了前にコピーしてください。";
 "editor.expandSource" = "原文をすべて表示";
 "editor.collapseSource" = "原文を折りたたむ";
+
+"language.search" = "言語を検索";
+"language.results" = "言語一覧";
+"language.noResults" = "該当する言語がありません。";
+"language.modelHint" = "選択できる言語の一覧です。翻訳品質は設定したモデルによって異なります。";
+"language.favorites" = "お気に入りの翻訳先言語";
+"language.favoriteSelect" = "%@に切り替える（Command-%d）";
+"language.selected" = "選択中";
+"language.add" = "お気に入り言語を追加…";
+"language.remove" = "%@をお気に入りから削除";
+"language.moveUp" = "%@を上へ移動";
+"language.moveDown" = "%@を下へ移動";
+"language.favoritesHint" = "ショートカット順に最大5言語を登録できます。Command-1〜5はフォーカス中のポップアップかエディタ内だけで動作します。言語を変えても文章は保持され、再翻訳で適用します。";
