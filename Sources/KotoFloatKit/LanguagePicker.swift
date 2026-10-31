@@ -7,6 +7,7 @@ struct LanguagePicker: NSViewRepresentable {
     var includeAutomatic = false
     var excluded: Set<TranslationLanguage> = []
     var buttonTitle: String?
+    var favoriteLanguages: [TranslationLanguage] = []
     let onSelect: (TranslationLanguage) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -38,7 +39,7 @@ struct LanguagePicker: NSViewRepresentable {
             guard let picker else { return }
             if popover.isShown { popover.performClose(nil); return }
             let controller = LanguagePickerController(selection: picker.selection, includeAutomatic: picker.includeAutomatic,
-                excluded: picker.excluded, onSelect: { [weak self] language in
+                excluded: picker.excluded, favoriteLanguages: picker.favoriteLanguages, onSelect: { [weak self] language in
                     self?.picker?.onSelect(language)
                     self?.popover.performClose(nil)
                 }, onDismiss: { [weak self] in self?.popover.performClose(nil) })
@@ -58,15 +59,18 @@ struct LanguagePicker: NSViewRepresentable {
     private let selection: TranslationLanguage
     private let includeAutomatic: Bool
     private let excluded: Set<TranslationLanguage>
+    private let favoriteLanguages: [TranslationLanguage]
     private let onSelect: (TranslationLanguage) -> Void
     private let onDismiss: () -> Void
     private(set) var results: [TranslationLanguage] = []
 
     init(selection: TranslationLanguage, includeAutomatic: Bool, excluded: Set<TranslationLanguage>,
+         favoriteLanguages: [TranslationLanguage] = [],
          onSelect: @escaping (TranslationLanguage) -> Void, onDismiss: @escaping () -> Void) {
         self.selection = selection
         self.includeAutomatic = includeAutomatic
         self.excluded = excluded
+        self.favoriteLanguages = favoriteLanguages
         self.onSelect = onSelect
         self.onDismiss = onDismiss
         super.init(nibName: nil, bundle: nil)
@@ -117,7 +121,8 @@ struct LanguagePicker: NSViewRepresentable {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let language = results[row]
         let check = language == selection ? "✓ " : ""
-        let field = NSTextField(wrappingLabelWithString: check + language.title + "\n" + language.nativeName + " · " + language.rawValue)
+        let favorite = favoriteLanguages.firstIndex(of: language).map { "  ★ ⌘\($0 + 1)" } ?? ""
+        let field = NSTextField(wrappingLabelWithString: check + language.title + favorite + "\n" + language.nativeName + " · " + language.rawValue)
         field.font = .systemFont(ofSize: NSFont.systemFontSize)
         field.setAccessibilityLabel(field.stringValue)
         return field
@@ -127,6 +132,11 @@ struct LanguagePicker: NSViewRepresentable {
 
     private func refreshResults() {
         results = TranslationLanguage.search(searchField.stringValue, includeAutomatic: includeAutomatic).filter { !excluded.contains($0) }
+        if searchField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            var seen = Set<TranslationLanguage>()
+            let favorites = favoriteLanguages.filter { results.contains($0) && seen.insert($0).inserted }
+            results = favorites + results.filter { !seen.contains($0) }
+        }
         table.reloadData()
         emptyLabel.isHidden = !results.isEmpty
         if let index = results.firstIndex(of: selection) ?? results.indices.first {

@@ -59,7 +59,7 @@ final class PopupController: NSObject, NSWindowDelegate {
             frame = PopupGeometry.nearSelection(selectionBounds,
                 size: preferences.savedFrame?.size ?? PopupGeometry.defaultSize, screens: screens, pointer: pointer)
         }
-        panel.setFrame(frame, display: panel.isVisible)
+        applyFrame(frame)
         applyWindowLevel()
         // Keep the source application's keyboard focus until the user clicks the panel.
         // 利用者がパネルをクリックするまで、元アプリのキーボードフォーカスを維持する。
@@ -100,7 +100,7 @@ final class PopupController: NSObject, NSWindowDelegate {
         panel.close()
         panel = PopupWindowFactory.make(mode: mode)
         configurePanel()
-        panel.setFrame(frame, display: false)
+        applyFrame(PopupGeometry.restore(frame, screens: NSScreen.screens.map(\.visibleFrame), pointer: NSEvent.mouseLocation))
         if wasVisible {
             panel.orderFrontRegardless()
             preferences.savedFrame = panel.frame
@@ -116,12 +116,13 @@ final class PopupController: NSObject, NSWindowDelegate {
         guard panel.isVisible else { return }
         let frame = PopupGeometry.restore(panel.frame, screens: NSScreen.screens.map(\.visibleFrame),
                                           pointer: NSEvent.mouseLocation)
-        if frame != panel.frame { panel.setFrame(frame, display: true) }
+        applyFrame(frame)
         preferences.savedFrame = panel.frame
     }
 
     func windowDidMove(_ notification: Notification) { saveFrameIfVisible() }
     func windowDidResize(_ notification: Notification) { saveFrameIfVisible() }
+    func windowDidChangeScreen(_ notification: Notification) { recoverVisibleFrame() }
     func windowWillClose(_ notification: Notification) {
         preferences.savedFrame = panel.frame
         capture.cancel()
@@ -132,6 +133,13 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     private func saveFrameIfVisible() {
         if panel.isVisible { preferences.savedFrame = panel.frame }
+    }
+
+    private func applyFrame(_ frame: CGRect) {
+        let screen = PopupGeometry.screen(for: frame, screens: NSScreen.screens.map(\.visibleFrame), pointer: NSEvent.mouseLocation)
+        panel.maxSize = CGSize(width: .greatestFiniteMagnitude,
+            height: screen.map { PopupGeometry.maximumHeight(on: $0) } ?? PopupGeometry.maximumHeight)
+        if frame != panel.frame { panel.setFrame(frame, display: panel.isVisible) }
     }
 
     private func applyWindowLevel() {

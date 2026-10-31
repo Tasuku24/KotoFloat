@@ -4,15 +4,24 @@ import CoreGraphics
 enum PopupGeometry {
     static let defaultSize = CGSize(width: 480, height: 400)
     static let minimumSize = CGSize(width: 360, height: 240)
+    static let maximumHeight: CGFloat = 600
+
+    static func maximumHeight(on screen: CGRect) -> CGFloat {
+        min(maximumHeight, max(minimumSize.height, screen.height * 7 / 10), screen.height)
+    }
+
+    static func screen(for frame: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect? {
+        let screens = screens.filter(isUsable)
+        if let frame, let overlapping = screens.max(by: { intersectionArea(frame, $0) < intersectionArea(frame, $1) }),
+           intersectionArea(frame, overlapping) > 0 { return overlapping }
+        return screen(at: pointer, in: screens)
+    }
 
     static func restore(_ saved: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect {
         guard let saved, isUsable(saved) else {
             return nearPointer(size: defaultSize, screens: screens, pointer: pointer)
         }
-        let screens = screens.filter(isUsable)
-        let overlapping = screens.max { intersectionArea(saved, $0) < intersectionArea(saved, $1) }
-        let screen = overlapping.flatMap { intersectionArea(saved, $0) > 0 ? $0 : nil }
-            ?? screen(at: pointer, in: screens)
+        let screen = screen(for: saved, screens: screens, pointer: pointer)
         guard let screen else { return saved }
         return clamp(saved, to: screen)
     }
@@ -56,7 +65,7 @@ enum PopupGeometry {
 
     private static func clamp(_ frame: CGRect, to screen: CGRect) -> CGRect {
         let width = min(max(frame.width, minimumSize.width), screen.width)
-        let height = min(max(frame.height, minimumSize.height), screen.height)
+        let height = min(max(frame.height, minimumSize.height), maximumHeight(on: screen))
         return CGRect(x: min(max(frame.minX, screen.minX), screen.maxX - width),
                       y: min(max(frame.minY, screen.minY), screen.maxY - height),
                       width: width, height: height)

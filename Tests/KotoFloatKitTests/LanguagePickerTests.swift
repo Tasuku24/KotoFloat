@@ -3,6 +3,23 @@ import Testing
 @testable import KotoFloatKit
 
 @MainActor struct LanguagePickerTests {
+    @Test func favoritesLeadUnfilteredListWithoutDuplicatesOrExcludedLanguages() {
+        let picker = LanguagePickerController(selection: .japanese, includeAutomatic: false, excluded: [.english],
+            favoriteLanguages: [.french, .japanese, .french, .automatic, .english],
+            onSelect: { _ in }, onDismiss: {})
+        picker.loadViewIfNeeded()
+        #expect(Array(picker.results.prefix(2)) == [.french, .japanese])
+        #expect(picker.results.count == 24)
+        #expect(!picker.results.contains(.english))
+        #expect(!picker.results.contains(.automatic))
+        picker.searchField.stringValue = "pt"
+        picker.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification))
+        #expect(picker.results == [.portugueseBrazil, .portuguesePortugal])
+        picker.searchField.stringValue = "  "
+        picker.controlTextDidChange(Notification(name: NSControl.textDidChangeNotification))
+        #expect(Array(picker.results.prefix(2)) == [.french, .japanese])
+    }
+
     @Test func searchNavigationAndSelectionNeverSubmitUntilReturn() {
         var selected: TranslationLanguage?
         let picker = LanguagePickerController(selection: .japanese, includeAutomatic: false, excluded: [],

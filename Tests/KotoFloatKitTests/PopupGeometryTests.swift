@@ -27,7 +27,33 @@ struct PopupGeometryTests {
 
     @Test func shrinksOversizedWindowToScreen() {
         let saved = CGRect(x: -100, y: -100, width: 3000, height: 2000)
-        #expect(PopupGeometry.restore(saved, screens: [main], pointer: .zero) == main)
+        let result = PopupGeometry.restore(saved, screens: [main], pointer: .zero)
+        #expect(main.contains(result))
+        #expect(result.width == 1440)
+        #expect(result.height == 600)
+    }
+
+    @Test func capsHeightToSeventyPercentOnShorterDisplaysAcrossPlacements() {
+        let screen = CGRect(x: -1000, y: 50, width: 1000, height: 700)
+        let size = CGSize(width: 480, height: 900)
+        let pointer = CGPoint(x: -800, y: 600)
+        let selection = CGRect(x: -900, y: 500, width: 120, height: 24)
+        let frames = [
+            PopupGeometry.restore(CGRect(origin: pointer, size: size), screens: [screen], pointer: pointer),
+            PopupGeometry.nearPointer(size: size, screens: [screen], pointer: pointer),
+            PopupGeometry.nearSelection(selection, size: size, screens: [screen], pointer: pointer)
+        ]
+        for frame in frames {
+            #expect(frame.height == 490)
+            #expect(screen.contains(frame))
+        }
+    }
+
+    @Test func preservesInteractiveMinimumOnShortButUsableDisplay() {
+        let screen = CGRect(x: 0, y: 0, width: 500, height: 300)
+        let result = PopupGeometry.restore(nil, screens: [screen], pointer: .zero)
+        #expect(result.height == 240)
+        #expect(screen.contains(result))
     }
 
     @Test func allowsSmallUsableScreenWithoutOverflow() {
