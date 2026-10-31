@@ -59,7 +59,7 @@ SmolLM2 responses mixed languages, echoed translation instructions, and introduc
 - [x] Return only the translation, without echoed instructions, source repetition, or unrelated explanations; preserve paragraph structure and numeric units. Qwen avoided extra explanations in these samples but lost both paragraph breaks.
 - [x] Follow relevant glossary choices in context, including `voltage → 電位差`, and assess remaining missing-term warnings against the actual output. Qwen obeyed both Japanese-to-English entries but missed both English-to-Japanese entries; the app reported both missing terms correctly.
 
-IME, VoiceOver, AutoRaise, visual/lifecycle coverage, and remote transport below are independent of the model; switching to Qwen alone will not verify them. The user confirmed that no remote server is currently available.
+IME, VoiceOver, AutoRaise, visual/lifecycle coverage, and remote transport below are independent of the model; switching to Qwen alone will not verify them. No remote server was available at that time; the later host verification is recorded in [Phase 3](phase-3.md#host-llm-verification-2026-11-01).
 
 ### Qwen content evaluation (2026-10-30)
 
@@ -92,7 +92,7 @@ The evaluation recorder is disabled without `KOTOFLOAT_EVALUATION_REPORT`; all r
 - [ ] Actual Japanese IME candidate conversion/cancellation and caret/selection behavior throughout composition. This Mac had ABC selected and both input-source shortcuts disabled; the supported automation could not switch the input-source menu. Native marked-text insertion/commit passed separately.
 - [ ] VoiceOver spoken navigation and complete keyboard traversal, plus actual AutoRaise hover transitions between applications. AX labels and native focus tests passed, but the available automation has no hover-only action or VoiceOver speech capture. AutoRaise was running during the session; that alone is not acceptance.
 - [ ] Visual inspection at the minimum size and in dark mode, very long glossary-warning lists, source expansion with long content, and all close/minimize combinations during active generation. Minimum-size scrolling in both appearances passed native tests; the live large/light layout and specific transitions above passed. Do not infer the full matrix from those samples.
-- [ ] Real HTTPS/VPN transport and certificate/authentication behavior against the intended remote service. No remote endpoint was available or supplied; the real-model and Keychain checks used loopback HTTP only.
+- [x] Real production-client HTTPS/Tailscale transport with system certificate validation and existing Keychain credentials against the intended `hy-mt2-7b` host; missing/invalid tokens were rejected. See the [2026-11-01 Phase 3 record](phase-3.md#host-llm-verification-2026-11-01). Remote signed-app desktop/permission and restart checks remain separate there.
 
 The app remains a locally signed development preview. Release acceptance (now Phase 7 in the [revised roadmap](../superpowers/plans/2026-10-29-initial-release-phases.md)), distribution signing, and notarization are separate. The Phase 5 merge does not close the pending items above.
 
@@ -157,7 +157,7 @@ SmolLM2の応答には言語の混在、翻訳指示の繰り返し、5ボルト
 - [x] 翻訳だけを返し、指示文・原文の繰り返しや無関係な説明を含めず、段落構造と数値・単位を保持すること。Qwenの今回の応答に余分な説明はありませんでしたが、両方向の段落区切りが失われました。
 - [x] `voltage → 電位差`などの関連用語を文脈に沿って使い、残る用語警告と実際の結果を照合すること。日英の指定2件は遵守し、英日の指定2件は欠落しました。アプリは欠落2件を正しく返しました。
 
-以下のIME、VoiceOver、AutoRaise、表示・ライフサイクル、遠隔通信はモデルとは別の項目です。Qwenへ替えるだけでは確認できません。遠隔サーバーは現在ないことを利用者に確認済みです。
+以下のIME、VoiceOver、AutoRaise、表示・ライフサイクル、遠隔通信はモデルとは別の項目です。Qwenへ替えるだけでは確認できません。当時は遠隔サーバーがありませんでした。その後のホスト検証は[第3段階](phase-3.md#ホストllmでの検証2026-11-01)に記録しています。
 
 ### Qwenによる内容評価（2026-10-30）
 
@@ -190,7 +190,7 @@ KOTOFLOAT_LOCAL_MODEL=qwen2.5-0.5b-instruct KOTOFLOAT_EVALUATION_REPORT="$PWD/.b
 - [ ] 実日本語IMEの候補変換／中断、変換中のカーソルと選択。このMacではABCが選択され、入力ソース切替のショートカットが両方無効で、対応する操作機能で入力メニューを切り替えられませんでした。ネイティブの変換中文字列APIによる入力・確定は別途成功しています。
 - [ ] VoiceOverの読み上げによる移動とキーボード操作全体、別アプリ間の実AutoRaiseホバー移動。AXラベルとネイティブのフォーカステストは成功しましたが、操作環境にホバーだけを行う機能とVoiceOver音声の取得機能がありません。実行中にAutoRaiseが起動していたことだけでは受け入れ済みとしません。
 - [ ] 最小サイズと暗色での目視、長い用語警告リスト、長文の原文展開、生成中の閉じる／最小化の全組み合わせ。最小サイズで両外観のスクロールはネイティブテスト、大きい明色画面と上記の特定の遷移は実機で成功していますが、全組み合わせの成功は推測しません。
-- [ ] 実際の遠隔サービスでのHTTPS／VPN通信、証明書と認証。接続先の提供・設定がなかったため未検証です。実モデルとKeychainの確認はループバックHTTPのみです。
+- [x] 目的の`hy-mt2-7b`ホストへ、本番クライアントでHTTPS／Tailscale通信、システムの証明書検証、既存Keychain認証情報を確認し、トークンなし／誤った値は拒否されました。[2026-11-01の第3段階の記録](phase-3.md#ホストllmでの検証2026-11-01)を参照してください。遠隔の署名済みアプリの実画面・権限・再起動確認は同記録に別途残しています。
 
 アプリはローカル署名の開発プレビューです。配布前の受け入れ（[改訂した開発計画](../superpowers/plans/2026-10-29-initial-release-phases.md)では第7段階）、配布署名、公証は別作業です。第5段階のマージによって上記の未確認項目が完了したとは扱いません。
 

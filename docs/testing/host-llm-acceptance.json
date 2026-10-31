@@ -1,0 +1,159 @@
+{
+  "date": "2026-11-01",
+  "applicationCommit": "964b1b876f6f80f57ca051a73e5b9558247fb143",
+  "model": {
+    "identifier": "hy-mt2-7b"
+  },
+  "transport": {
+    "scheme": "https",
+    "network": "Tailscale",
+    "httpOptIn": false,
+    "certificateValidation": "system",
+    "credentials": "existing endpoint-scoped Keychain token; read only"
+  },
+  "temperature": 0.2,
+  "functionalTests": {
+    "passed": 5,
+    "durationSeconds": 57.917
+  },
+  "cases": [
+    {
+      "missingPreferredTranslations": [],
+      "output": "抵抗器にかかる電圧は5ボルトです。",
+      "sample": {
+        "glossary": [],
+        "id": "en-ja-basic",
+        "source": "en",
+        "target": "ja",
+        "text": "The voltage across the resistor is five volts."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "The voltage difference across the resistor is 5 V.",
+      "sample": {
+        "glossary": [],
+        "id": "ja-en-basic",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器の両端の電位差は5 Vです。"
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "抵抗器にかかる電圧は5ボルトです。",
+      "sample": {
+        "glossary": [],
+        "id": "auto-ja",
+        "source": "automatic",
+        "target": "ja",
+        "text": "The voltage across the resistor is five volts."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "The voltage difference across the resistor is 5 V.",
+      "sample": {
+        "glossary": [],
+        "id": "auto-en",
+        "source": "automatic",
+        "target": "en",
+        "text": "抵抗器の両端の電位差は5 Vです。"
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "抵抗器を交換する前に、電源を切ってください。\n\n電源を再接続した後、電圧は5Vで電流は0.2Aです。",
+      "sample": {
+        "glossary": [],
+        "id": "en-ja-paragraphs",
+        "source": "en",
+        "target": "ja",
+        "text": "Disconnect the power before replacing the resistor.\n\nAfter reconnecting the power, the voltage is 5 V and the current is 0.2 A."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "Please turn off the power before replacing the resistor.\n\nAfter reconnecting the power supply, the voltage is 5 V and the current is 0.2 A.",
+      "sample": {
+        "glossary": [],
+        "id": "ja-en-paragraphs",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器を交換する前に、電源を切ってください。\n\n電源を再接続した後、電圧は5 V、電流は0.2 Aです。"
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "この抵抗器にかかる電位差は5ボルトです。",
+      "sample": {
+        "glossary": [
+          {
+            "caseSensitive": false,
+            "context": "Electrical potential difference across a component.",
+            "enabled": true,
+            "id": "76F44975-DDBA-4716-BA68-E1E4E7A6889C",
+            "preferredTranslation": "電位差",
+            "sourceLanguage": "en",
+            "sourceTerm": "voltage",
+            "targetLanguage": "ja"
+          },
+          {
+            "caseSensitive": false,
+            "context": "",
+            "enabled": true,
+            "id": "60DEE717-676C-4DD5-9725-1C103400B2AF",
+            "preferredTranslation": "抵抗器",
+            "sourceLanguage": "en",
+            "sourceTerm": "resistor",
+            "targetLanguage": "ja"
+          }
+        ],
+        "id": "en-ja-glossary",
+        "source": "en",
+        "target": "ja",
+        "text": "The voltage across the resistor is five volts."
+      },
+      "state": "completed"
+    },
+    {
+      "missingPreferredTranslations": [],
+      "output": "The potential difference across the resistor is 5 V.",
+      "sample": {
+        "glossary": [
+          {
+            "caseSensitive": false,
+            "context": "Electrical potential difference across a component.",
+            "enabled": true,
+            "id": "720AA86D-8023-48B8-86C9-6F9EFA65AB31",
+            "preferredTranslation": "potential difference",
+            "sourceLanguage": "ja",
+            "sourceTerm": "電位差",
+            "targetLanguage": "en"
+          },
+          {
+            "caseSensitive": false,
+            "context": "",
+            "enabled": true,
+            "id": "A800A41E-794D-4251-9262-AF23383F91B5",
+            "preferredTranslation": "resistor",
+            "sourceLanguage": "ja",
+            "sourceTerm": "抵抗器",
+            "targetLanguage": "en"
+          }
+        ],
+        "id": "ja-en-glossary",
+        "source": "ja",
+        "target": "en",
+        "text": "抵抗器の両端の電位差は5 Vです。"
+      },
+      "state": "completed"
+    }
+  ]
+}

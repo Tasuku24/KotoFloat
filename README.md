@@ -10,7 +10,7 @@ Translate selected text without leaving your current task. KotoFloat is a macOS 
 
 Phase 6 adds **searchable language selection and favorites**. **Phase 7** covers end-to-end acceptance and distribution preparation; outstanding physical-user checks from earlier phases remain open. See the [revised roadmap](docs/superpowers/plans/2026-10-29-initial-release-phases.md).
 
-Phases 1–6 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, a shared translation editor, and searchable language selection with favorites. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Fixed API fixtures and real local LM Studio English/Japanese smoke translations have been verified; remote HTTPS/VPN acceptance remains pending.
+Phases 1–6 are implemented: a menu bar app with a movable, resizable popup, selected-text capture, OpenAI-compatible streaming translation, local glossaries with CSV import/export, a shared translation editor, and searchable language selection with favorites. The popup preserves source-app focus when shown, stays open across focus changes, and closes with Escape only while it has keyboard focus. It remembers position and size, offers near-pointer placement, and lets you toggle always-on-top independently. The shortcut defaults to **Control–Option–Command–T** and can be changed or cleared in Settings. Fixed API fixtures, local LM Studio smoke translations, and the production client against a real `hy-mt2-7b` host over HTTPS/Tailscale have been verified. See [Phase 3 verification](docs/testing/phase-3.md) for host evidence and remaining desktop acceptance.
 
 **Standard** focus behavior is the default for people who do not use AutoRaise. If hovering stops moving focus after using the popup, select **Settings → Popup → Focus → Window behavior → AutoRaise compatibility**. The setting is saved and takes effect immediately without losing the popup size, position, or text. Compatibility depends on AutoRaise settings; it is not a promise for every window manager. KotoFloat never moves the mouse pointer.
 
@@ -50,7 +50,7 @@ Without an LLM, run the background suite against a loopback-only fixed API serve
 python3 scripts/test_with_mock_server.py
 ```
 
-To use that fixture manually, run `python3 scripts/mock_llm_server.py`, set the base URL to `http://127.0.0.1:8765/v1`, and choose model `kotofloat-fixture`. It always returns text explicitly identified as a test response, never a real translation. The normal app has no automatic mock mode. Real model quality, remote HTTPS/VPN access, Keychain access in the signed app, and the new live UI still need acceptance checks.
+To use that fixture manually, run `python3 scripts/mock_llm_server.py`, set the base URL to `http://127.0.0.1:8765/v1`, and choose model `kotofloat-fixture`. It always returns text explicitly identified as a test response, never a real translation. The normal app has no automatic mock mode. Real host HTTPS/Tailscale, authentication, and eight English/Japanese acceptance samples are verified in [Phase 3](docs/testing/phase-3.md). Signed-app loopback Keychain checks and remaining desktop acceptance are recorded in [Phase 5](docs/testing/phase-5.md); the samples do not establish general model quality.
 
 The commands above intentionally build and launch the app. Native window tests require a logged-in graphical macOS session and briefly show test windows; run them explicitly with `swift test --jobs 2` when desktop interaction is convenient. They use separate settings domains. Pure geometry and persistence tests can also run separately with `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'`. In Xcode, open `Package.swift` to run the package's tests; the app scheme is for building and running the app.
 
@@ -124,7 +124,7 @@ No license has been selected. This project does not currently grant an open-sour
 
 第6段階で **検索付き言語選択とお気に入り** を追加しました。**第7段階：通し検証と配布準備** では、前段階から残る実利用者による受け入れ確認も扱います。[改訂した開発計画](docs/superpowers/plans/2026-10-29-initial-release-phases.md)を参照してください。
 
-第1〜第6段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、お気に入り付きの検索可能な言語選択、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。固定API応答とローカルの実LM Studioによる英日翻訳の疎通を確認済みで、遠隔HTTPS／VPNは未確認です。
+第1〜第6段階を実装しました。移動・サイズ変更できるポップアップ、選択文章の取得、OpenAI互換のストリーミング翻訳、CSV入出力付きのローカル用語集、共有翻訳エディタ、お気に入り付きの検索可能な言語選択、メニューバー常駐に対応しています。ポップアップは表示時に元アプリのフォーカスを奪わず、フォーカスが移っても表示を維持し、キーボードフォーカスがあるときだけEscで閉じます。位置・サイズの保存、カーソル付近への配置、独立した最前面固定の切り替えに対応しています。ショートカットの初期設定は **Control–Option–Command–T** で、設定から変更・解除できます。固定API応答、ローカルLM Studioの疎通、本番クライアントからHTTPS／Tailscale経由の実`hy-mt2-7b`ホストへの接続を確認済みです。ホストの証拠と残る実画面の受け入れは[第3段階の検証記録](docs/testing/phase-3.md)を参照してください。
 
 AutoRaiseを使わない方を想定した **標準** の動作が初期設定です。ポップアップを操作した後にホバーでフォーカスが移らなくなる場合は、**設定 → ポップアップ → フォーカス → ウィンドウの動作 → AutoRaise互換** を選んでください。設定は保存され、位置・サイズ・文章を維持したまま即座に切り替わります。AutoRaiseの設定によって動作が異なるため、すべてのウィンドウ管理アプリへの対応を保証するものではありません。KotoFloatはマウスポインターを移動しません。
 
@@ -164,7 +164,7 @@ LLMがない場合は、ループバック専用の固定応答サーバーで�
 python3 scripts/test_with_mock_server.py
 ```
 
-手動で試す場合は `python3 scripts/mock_llm_server.py` を起動し、ベースURLを `http://127.0.0.1:8765/v1`、モデルを `kotofloat-fixture` にします。常にテスト用と明示した固定文を返し、本物の翻訳は行いません。通常のアプリに、自動で固定応答へ切り替わる機能はありません。実モデルの品質、遠隔HTTPS／VPN接続、署名済みアプリからのキーチェーン利用、新しい実画面の確認は今後必要です。
+手動で試す場合は `python3 scripts/mock_llm_server.py` を起動し、ベースURLを `http://127.0.0.1:8765/v1`、モデルを `kotofloat-fixture` にします。常にテスト用と明示した固定文を返し、本物の翻訳は行いません。通常のアプリに、自動で固定応答へ切り替わる機能はありません。実ホストのHTTPS／Tailscale、認証、英日8例の受け入れは[第3段階](docs/testing/phase-3.md)で確認しました。署名済みアプリのループバックKeychain検証と残る実画面の受け入れは[第5段階](docs/testing/phase-5.md)に記録しています。少数例はモデル全体の品質を保証するものではありません。
 
 上記のコマンドは、意図的にアプリをビルドして起動する手順です。ネイティブウィンドウのテストにはログイン済みのmacOS画面が必要で、テスト中は一時的にウィンドウが表示されます。画面を操作してよいタイミングで、明示的に `swift test --jobs 2` を実行してください。設定保存先はテスト専用です。配置計算と保存のテストだけなら `swift test --filter 'PopupGeometryTests|PopupPreferencesTests'` でも実行できます。Xcodeでパッケージのテストを実行するときは `Package.swift` を開いてください。アプリのスキームはビルド・起動用です。
 

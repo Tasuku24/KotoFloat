@@ -29,7 +29,7 @@ Language/favorite selection preserves text, edits and undo. Requests keep their 
 - [ ] Complete English/Japanese visual matrix with five long favorites, minimum popup/editor sizes, right-to-left text, and light/dark appearances. Existing editor minimum-size/appearance tests are useful but do not establish this full matrix.
 - [ ] Settings add/remove/reorder and glossary entry controls with physical keyboard and screen reader.
 - [ ] Real-model quality for expanded languages, language variants and glossary adherence; existing small Qwen samples do not establish multilingual quality. Existing matcher boundary rules are preserved; morphology and word segmentation across all new languages have not been evaluated.
-- [ ] Outstanding Phase 1–5 acceptance, remote HTTPS/VPN and distribution/signing remain in their records and Phase 7. This development branch was not merged or published.
+- [ ] Outstanding Phase 1–5 desktop acceptance and distribution/signing remain in their records and Phase 7. Host HTTPS/Tailscale was subsequently verified in [Phase 3](phase-3.md). This development branch was not merged or published.
 
 ## 日本語
 
@@ -60,4 +60,4 @@ Language/favorite selection preserves text, edits and undo. Requests keep their 
 - [ ] 長いお気に入り5件、最小ポップアップ／エディタ、右から左の文章、ライト／ダーク、英日表示の全組み合わせ。既存の最小サイズ／外観テストだけではこの全体を確認したことにはしません。
 - [ ] 設定の追加・削除・並べ替え、用語編集の実キーボード／読み上げ操作。
 - [ ] 追加言語・字体・地域・用語集の実モデル品質。既存の小型Qwenの例は多言語品質の証拠ではありません。用語照合の境界規則は維持し、全言語の形態・分かち書きは未評価です。
-- [ ] 第1〜第5段階の残項目、遠隔HTTPS／VPN、配布・署名は元の記録と第7段階で管理します。この開発ブランチはマージ・公開していません。
+- [ ] 第1〜第5段階の実画面の残項目と配布・署名は元の記録と第7段階で管理します。ホストHTTPS／Tailscaleはその後[第3段階](phase-3.md)で確認しました。この開発ブランチはマージ・公開していません。
