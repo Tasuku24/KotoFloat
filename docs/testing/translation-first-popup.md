@@ -24,7 +24,11 @@ The frame remains stable during streaming and retains the saved size within the 
 - Original/details reset on a new capture, Copy-fallback consent, edited-draft replacement, manual entry, and shared editor interaction in the running app.
 - Real Japanese IME, full keyboard traversal, VoiceOver announcements, and AutoRaise interaction.
 
-KotoFloat was not launched or restarted. The user's `.build/xcode` app and saved preferences were not replaced. No new real-server/model-quality or performance benchmark is claimed.
+The initial background verification did not launch or restart KotoFloat. The user's `.build/xcode` app and saved preferences were not replaced. No new real-server/model-quality or performance benchmark is claimed.
+
+### Authorized restart and icon integration
+
+After the user requested a restart and reported missing icons, the approved Graphite app icon and outline K menu mark were integrated from `964b1b8` as `afde63c`. The background suite still passed all 134 tests. A fresh Debug build embedded the PDF correctly; stale incremental products at the existing output path had omitted it from the app despite producing the sibling package bundle. A clean Release build resolved the stale copy and signature. The final app contains `AppIcon.icns` and a byte-identical `MenuBarIcon.pdf` inside its embedded package bundle, passes strict signature verification, and loads the PDF as an 18-point template image. The same Release app path was restarted after graceful termination, preserving preferences. The process was verified running. On-screen menu-bar glyph appearance was not independently captured; this does not close the popup's broader desktop acceptance list.
 
 ## 日本語
 
@@ -50,4 +54,8 @@ KotoFloat was not launched or restarted. The user's `.build/xcode` app and saved
 - 実アプリでの新規取得後の原文・詳細の初期化、コピー取得の同意、編集中の置換確認、手入力、エディタとの連携。
 - 日本語IME、全操作のキーボード移動、VoiceOverの読み上げ、AutoRaiseとの連携。
 
-KotoFloatの起動・再起動は行っていない。利用者の `.build/xcode` のアプリと保存設定は置き換えていない。新たな実サーバー・翻訳品質・性能計測の確認済みとはしない。
+初回のバックグラウンド検証ではKotoFloatの起動・再起動は行っていない。利用者の `.build/xcode` のアプリと保存設定は置き換えていない。新たな実サーバー・翻訳品質・性能計測の確認済みとはしない。
+
+### 許可された再起動とアイコン統合
+
+利用者の再起動依頼とアイコン未反映の報告を受け、採用済みのGraphiteアプリアイコンと輪郭Kを `964b1b8` から `afde63c` として統合した。バックグラウンドテストは引き続き134件が成功した。新しい出力先でのDebugビルドではPDFを正しく同梱できたが、既存出力先の古い差分生成物では、隣接するパッケージバンドルにPDFがあってもアプリ内部には入っていなかった。Releaseのクリーンビルドで古いコピーと署名を更新した。最終アプリ内の `AppIcon.icns` と、元データに一致する内包バンドルの `MenuBarIcon.pdf`、厳密な署名検証、18ポイントのテンプレート画像としての読み込みを確認した。正常終了後、設定を維持して同じReleaseアプリのパスから再起動し、動作中のプロセスを確認した。メニューバー上の実際の字形は独立した画像として取得できておらず、ポップアップ全体の実画面の残確認を完了したものではない。

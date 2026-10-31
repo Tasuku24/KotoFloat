@@ -14,6 +14,8 @@ nice -n 10 python3 scripts/export_icons.py --vectorcraft-cli /path/to/vectorcraf
 
 The application asset catalog belongs to the Xcode app target. The PDF belongs to the KotoFloatKit resource bundle, alongside its localized strings. Exporting does not modify the source document or launch KotoFloat.
 
+Verify the actual built app contains both `Contents/Resources/AppIcon.icns` and `Contents/Resources/KotoFloat_KotoFloatKit.bundle/Contents/Resources/MenuBarIcon.pdf`. A PDF present only in the sibling package bundle beside the app is insufficient. After switching branches that add resources, stale incremental build products may omit a newly added file from the embedded bundle. Use a clean build if this occurs, then run `codesign --verify --deep --strict` on the app before restarting it; manually changing a signed app's embedded resources invalidates its seal.
+
 ## 日本語
 
 採用デザインはB案・Graphite 05の配色です。`KotoFloat-Graphite.vectorcraft` は、承認済みの画像案をもとにVectorCraftで作成した編集用データです。アプリアイコンにはチャコールの背景、アイボリーのK、面取り、影を含めます。macOS用アセットカタログの10項目で16〜1024ピクセルに対応します。
@@ -23,3 +25,5 @@ The application asset catalog belongs to the Xcode app target. The PDF belongs t
 デスクトップアプリを開かずに保存済みの出力を再生成する場合は、上記コマンドのパスをインストール済みの `vectorcraft-cli` の場所に置き換えて実行してください。
 
 アプリ用アセットカタログはXcodeのアプリターゲットに、PDFは翻訳文字列と同じKotoFloatKitのリソースバンドルに含まれます。出力処理は編集用データを変更せず、KotoFloatも起動しません。
+
+ビルドしたアプリ本体に、上記のアプリアイコンとメニューバーPDFの両パスが存在することを確認してください。アプリと並んだパッケージバンドルにPDFがあるだけでは不十分です。リソースを追加するブランチへ切り替えた後、古い差分ビルドの生成物により新しいファイルがアプリ内へ入らない場合があります。その場合はクリーンビルドし、再起動前に上記コマンドで署名を確認します。署名済みアプリの内部リソースを手動で変更すると署名の検証に失敗します。
