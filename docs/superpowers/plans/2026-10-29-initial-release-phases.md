@@ -14,6 +14,22 @@
 
 **Spec:** The requirements summary in this document and the design discussion in the project chat. This is a phased roadmap; file-level implementation steps, types, and detailed tests will be defined before starting each phase.
 
+### Revised sequence (2026-10-31)
+
+The initial release now has seven phases. Phase 5 has been merged into `main`, but its remaining acceptance work is still open. Language selection and favorite languages are the next feature phase (Phase 6); the former Phase 6 becomes Phase 7. A merge does not establish acceptance completion.
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| 1 | App foundation and popup | Implemented; actual AutoRaise acceptance remains open. |
+| 2 | Selected-text capture | Implemented; remaining physical-user checks stay in the verification record. |
+| 3 | LLM connection and basic translation | Implemented; local-model evidence was added in Phase 5; remote/distribution checks remain open. |
+| 4 | Glossary integration | Implemented; model adherence has limitations and desktop acceptance remains open. |
+| 5 | Main translation window and editing | Merged into `main`; remaining acceptance work is tracked below. |
+| 6 | Searchable language selection and favorites | Next feature phase; detailed interaction choices are not yet finalized. |
+| 7 | End-to-end verification and distribution preparation | Follows Phase 6 and closes outstanding acceptance work from earlier phases. |
+
+Develop Phase 6 on `feature/language-picker-and-favorites` from the latest `main`, rather than continuing the merged Phase 5 branch. Define its detailed design and implementation plan before product-code changes. Fix any newly discovered draft-loss or stale-response defect before building on the affected behavior; unresolved acceptance items remain visible and block release claims.
+
 ### Global constraints
 
 - The initial version is Mac-only, with macOS 15 or later as the proposed deployment target.
@@ -37,6 +53,7 @@
 - Reuse one popup. Stale responses must not overwrite newer results.
 - Store glossaries on the Mac and send only relevant entries with a translation request.
 - Distinguish source text, generated translation, and edited translation. Moving to the editor must not generate a new translation.
+- Open a searchable target-language dropdown by clicking the language name in the popup, and configure a few favorite languages in settings for quick switching. The quick-switch mechanism remains a Phase 6 design decision.
 
 ### Review focus
 
@@ -45,6 +62,7 @@
 - A response arrives after cancellation: test in Phase 3 that it cannot restore or overwrite a result.
 - Conflicting glossary entries or a partially invalid CSV: test in Phase 4 that conflicts are visible and invalid imports do not partially update existing data.
 - Retranslation or window changes after manual edits: verify in Phase 5 that edits are not silently lost.
+- Language changes and favorite shortcuts: verify in Phase 6 that existing drafts and request-language snapshots remain intact, and that controls do not intercept input in another app.
 
 ---
 
@@ -100,18 +118,35 @@ Implementation and background/loopback checks are ready; real-model adherence an
 
 ### Phase 5: Main translation window and editing
 
-Implementation, 115 background/loopback tests, and 17 native tests pass. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise, remote HTTPS/VPN, and the remaining visual/lifecycle matrix still need acceptance; see [Phase 5 verification](../../testing/phase-5.md).
+Merged into `main` through PR #5 on 2026-10-31; acceptance is still in progress. Recorded verification includes 115 background/loopback tests and 17 native tests passing. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise, remote HTTPS/VPN, and the remaining visual/lifecycle matrix still need acceptance; see [Phase 5 verification](../../testing/phase-5.md).
 
 - [x] Provide source input, the generated translation, an editable translation, copying, and undo.
 - [x] Transfer the same translation state from the popup to the main window.
 - [x] Track edits and revision numbers so retranslating does not silently discard changes.
 - [x] Complete source expansion, active glossary display, and explicit retranslation after changing a language or glossary in the popup.
+- [ ] Complete the remaining editor IME, keyboard/VoiceOver, visual, and active-generation lifecycle checks recorded in Phase 5 verification. Include actual AutoRaise and remote-transport acceptance in Phase 7; do not mark them passed because of the merge.
 
 **Completion criteria:** Users can edit without regenerating, and navigation or delayed responses cannot corrupt edits. Click-based alternative translations are not implemented yet.
 
-### Phase 6: End-to-end verification and distribution preparation
+### Phase 6: Searchable language selection and favorites
 
-- [ ] Verify the complete flow: first launch, permissions, connection, selected-text translation, glossary use, and editing.
+Planned next; not implemented. The confirmed scope is a searchable target-language dropdown opened from the popup's language name, plus settings for a few favorite languages and a quick way to switch between them.
+
+- [ ] Define the selectable language list and search names, including language variants where needed. Distinguish app-selectable languages from the configured model's demonstrated translation quality.
+- [ ] Implement the popup dropdown with search, a selected-language indicator, and keyboard navigation. Opening or dismissing it must not submit a translation or close the parent popup unexpectedly.
+- [ ] Let users configure and persist favorite target languages in settings, and define their ordering and presentation.
+- [ ] Decide the quick-switch interaction before implementation: favorite buttons, keyboard shortcuts, or a combination. Buttons with optional shortcuts active only while KotoFloat has focus are the current recommendation, not an approved requirement. The favorite count and exact key bindings remain open.
+- [ ] Share the target-language and favorite settings between the popup and main editor. Preserve current English/Japanese preferences, existing glossary data, and language-direction matching as language support expands; define any required storage migration before changing saved formats.
+- [ ] Preserve source/generated/edited separation, request-language snapshots, draft protection, and stale-response rejection when switching languages. Keeping explicit retranslation is the current recommendation; automatic retranslation remains an open design choice and must not silently discard edits.
+- [ ] Verify language search, preference restoration, favorite switching, request language instructions, glossary compatibility, and draft protection with background tests. Separately coordinate desktop checks for dropdown focus/Esc behavior, IME search, keyboard/VoiceOver access, and narrow layouts.
+
+**Completion criteria:** Users can search for and select a target language from the popup and quickly select configured favorites. Both translation windows agree on the selection, existing data and edits remain safe, and language/model limitations and desktop verification results are recorded. Final model selection is not part of this phase.
+
+### Phase 7: End-to-end verification and distribution preparation
+
+This is the former Phase 6. Close outstanding acceptance items from Phases 1–6, retaining links to their original evidence rather than resetting their status.
+
+- [ ] Verify the complete flow: first launch, permissions, connection, selected-text translation, language search/favorite switching, glossary use, and editing.
 - [ ] Check AutoRaise, wake from sleep, network loss, display changes, long text, and repeated actions on real devices.
 - [ ] Check keyboard access, VoiceOver labels, text size, and light/dark appearance.
 - [ ] Verify glossary backup and preservation during upgrades, plus diagnostics that exclude credentials and translation content.
@@ -128,7 +163,7 @@ Implementation, 115 background/loopback tests, and 17 native tests pass. Authori
 
 ### Execution approach
 
-Use Phase 1 as the first review point. Before each phase, define detailed implementation steps, implement the smallest complete behavior and necessary tests, and commit before moving on. The initial version includes all six phases and glossaries; the translation demo in Phase 3 is not the finished release.
+Use Phase 1 as the first review point. Before each phase, define detailed implementation steps, implement the smallest complete behavior and necessary tests, and commit before moving on. Track implementation, merge status, and acceptance separately. The initial version includes all seven phases, glossaries, and searchable language selection/favorites; the translation demo in Phase 3 and the Phase 5 merge are not the finished release.
 
 ---
 
@@ -140,9 +175,25 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 **構成:** SwiftUIの画面とAppKitのウィンドウ・文字取得処理を組み合わせる。ポップアップとメイン画面は同じ翻訳結果を共有し、用語集・通信処理は画面から分離する。
 
-**技術構成:** Swift 6、SwiftUI、AppKit、URLSession、SwiftData、Keychain、Swift Package Manager。ショートカットはKeyboardShortcutsを採用する案。LM StudioのOpenAI互換APIを最初の検証対象とする。
+**技術構成:** Swift 6、SwiftUI、AppKit、URLSession、バージョン付きJSON形式の用語集保存、Keychain、Swift Package Manager。ショートカットはKeyboardShortcutsを採用する案。LM StudioのOpenAI互換APIを最初の検証対象とする。
 
 **仕様:** 本書の「要求の整理」とチャットでの設計議論。これは段階分けの計画であり、各段階のファイル・型・詳細テストを定義する実装手順は着手前に具体化する。
+
+### 開発順序の改訂（2026-10-31）
+
+初期版を7段階に変更する。第5段階は`main`へマージ済みだが、残る受け入れ確認は未完了。次の機能開発を言語選択・お気に入りの第6段階とし、従来の第6段階を第7段階へ移す。マージ済みを受け入れ確認済みとは扱わない。
+
+| 段階 | 範囲 | 状況 |
+| --- | --- | --- |
+| 1 | アプリの土台とポップアップ | 実装済み。実AutoRaiseの受け入れ確認が残る。 |
+| 2 | 選択文章の取得 | 実装済み。残る実操作確認は検証記録で管理する。 |
+| 3 | LLM接続と基本翻訳 | 実装済み。第5段階でローカル実モデルの証拠を追加。遠隔通信・配布時の確認は残る。 |
+| 4 | 用語集 | 実装済み。モデルの用語遵守には制限があり、実画面の確認も残る。 |
+| 5 | メイン翻訳画面と編集 | `main`へマージ済み。残る受け入れ確認は以下で管理する。 |
+| 6 | 検索付き言語選択とお気に入り | 次の機能開発。操作方法の詳細は未確定。 |
+| 7 | 通し検証と配布準備 | 第6段階後に実施し、前段階から残る受け入れ確認を完了する。 |
+
+第6段階は、マージ済みの第5段階のブランチを継続せず、最新の`main`から`feature/language-picker-and-favorites`を作って開発する。製品コードの変更前に詳細設計と実装手順を定義する。下書き消失や古い応答による上書きが新たに判明した場合は、その動作へ機能を積み重ねる前に修正する。未完了の受け入れ項目は保持し、リリース完了の扱いを妨げる条件とする。
 
 ### 全体の制約
 
@@ -167,6 +218,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 - 一つのポップアップを再利用する。古い応答は新しい結果を上書きしない。
 - 用語集はMac内に保存し、関係する項目のみを翻訳要求へ含める。
 - 原文、生成訳、編集後の訳文を区別する。編集画面への移動で再翻訳しない。
+- ポップアップの言語名を押すと検索付きの翻訳先言語プルダウンを開き、設定で数個のお気に入り言語を登録して素早く切り替えられるようにする。素早い切り替えの操作方法は第6段階で決める。
 
 ### 重点確認項目
 
@@ -175,6 +227,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 - キャンセル後に応答が届く条件：結果が復活・上書きされないことを第3段階でテストする。
 - 同じ用語の競合やCSVの一部不正：競合を表示し、不正な取り込みで既存データを部分更新しないことを第4段階でテストする。
 - 手動編集後の再翻訳や画面移動：編集内容を黙って失わないことを第5段階で検証する。
+- 言語変更とお気に入りのショートカット：下書きと要求時の言語情報を保持し、別アプリの入力を横取りしないことを第6段階で検証する。
 
 ---
 
@@ -230,18 +283,35 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第5段階：メイン翻訳画面と編集
 
-実装、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、遠隔HTTPS／VPN、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
+2026-10-31にPR #5で`main`へマージ済みですが、受け入れ確認は継続中です。記録済みの検証では、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、遠隔HTTPS／VPN、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
 
 - [x] 原文入力、生成訳、編集可能な訳文、コピー、取り消しを用意する。
 - [x] ポップアップから同じ翻訳状態をメイン画面へ引き継ぐ。
 - [x] 手動編集の有無と版番号を管理し、再翻訳で変更を黙って失わない動作を用意する。
 - [x] ポップアップでの原文展開、使用中の用語集表示、言語・用語集変更後の明示的な再翻訳を整える。
+- [ ] 第5段階の検証記録にある、エディタの実IME、キーボード／VoiceOver、表示、生成中の画面操作の残る確認を完了する。実AutoRaiseと遠隔通信の受け入れは第7段階にも含め、マージを理由に確認済みとしない。
 
 **完了条件:** 再生成なしで訳文を編集でき、画面移動や遅延応答で編集内容が壊れない。単語クリックによる別訳候補はまだ実装しない。
 
-### 第6段階：初期版の通し検証と配布準備
+### 第6段階：検索付き言語選択とお気に入り
 
-- [ ] 初回設定→権限許可→接続→選択翻訳→用語集→編集の一連の操作を確認する。
+次に実施する予定であり、未実装。確定した範囲は、ポップアップの言語名から開く検索付き翻訳先言語プルダウンと、設定で登録する数個のお気に入り言語、および素早い切り替え操作。
+
+- [ ] 選択可能な言語と検索用の名称を定義し、必要に応じて言語の種類も区別する。アプリで選べる言語と、設定したモデルで翻訳品質を確認できた言語は区別する。
+- [ ] 検索、選択中の表示、キーボード移動を備えたプルダウンをポップアップに実装する。開閉だけで翻訳を送信せず、親のポップアップを意図せず閉じない。
+- [ ] 設定でお気に入りの翻訳先言語を登録・保存できるようにし、順序と表示方法を定義する。
+- [ ] 実装前に、お気に入りボタン、キーボードショートカット、または併用から切り替え操作を決める。ボタンを基本とし、KotoFloatにフォーカスがあるときだけ有効なショートカットを任意で追加する案は現時点の推奨であり、承認済みの要件ではない。登録数と具体的なキーも未決定。
+- [ ] 翻訳先言語とお気に入り設定をポップアップ・メイン画面で共有する。言語対応を広げても、既存の英日設定、用語集データ、言語方向の照合を保持する。保存形式の変更に移行処理が必要なら変更前に定義する。
+- [ ] 言語切り替え時も、原文・生成訳・編集訳の区別、要求時の言語情報、下書き保護、古い応答の排除を維持する。明示的な再翻訳を維持する案を推奨するが、自動再翻訳の採否は設計時に決め、編集内容を黙って破棄しない。
+- [ ] 言語検索、設定復元、お気に入り切り替え、要求の言語指定、用語集との互換性、下書き保護をバックグラウンドテストで検証する。プルダウンのフォーカス／Esc、IME検索、キーボード／VoiceOver、狭い画面の実操作確認は別途調整する。
+
+**完了条件:** ポップアップで翻訳先言語を検索・選択でき、登録したお気に入りへ素早く切り替えられる。両翻訳画面の選択が一致し、既存データと編集内容を保持し、言語・モデルの制限と実画面の確認結果を記録する。モデルの最終選定は本段階に含めない。
+
+### 第7段階：初期版の通し検証と配布準備
+
+従来の第6段階。第1〜第6段階から残る受け入れ項目を、元の証拠へのリンクと進捗を保持して完了する。
+
+- [ ] 初回設定→権限許可→接続→選択翻訳→言語検索・お気に入り切り替え→用語集→編集の一連の操作を確認する。
 - [ ] AutoRaise、スリープ復帰、ネットワーク切断、ディスプレイ変更、長文、連続操作を実機で確認する。
 - [ ] キーボード操作、VoiceOverのラベル、文字サイズ、ライト／ダーク表示を確認する。
 - [ ] 用語集のバックアップと更新時の保全、資格情報・本文を含まない診断を確認する。
@@ -258,4 +328,4 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 実行上の方針
 
-第1段階を最初の確認点とする。各段階の詳細手順を作成し、最小限の実装と必要なテストを行い、コミットしてから次へ進む。用語集を含む第6段階までを初期版とし、第3段階の翻訳デモで完成とはしない。
+第1段階を最初の確認点とする。各段階の詳細手順を作成し、最小限の実装と必要なテストを行い、コミットしてから次へ進む。実装、マージ、受け入れ確認の進捗は分けて管理する。用語集・検索付き言語選択・お気に入りを含む第7段階までを初期版とし、第3段階の翻訳デモや第5段階のマージで完成とはしない。
