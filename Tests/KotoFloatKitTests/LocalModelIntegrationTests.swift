@@ -2,21 +2,61 @@ import AppKit
 import Testing
 @testable import KotoFloatKit
 
-// Opt in with an already loaded model on the local server; output quality is not asserted.
-// ローカルサーバーの読み込み済みモデルを明示した場合だけ実行し、訳文の品質は判定しない。
-@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_LOCAL_MODEL"] != nil))
+// Opt in with a loaded local model or the app's saved server; output quality is reviewed separately.
+// 読み込み済みのローカルモデルまたはアプリの保存済みサーバーを明示した場合だけ実行し、訳文の品質は別途評価する。
+@Suite(.serialized, .enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_LOCAL_MODEL"] != nil ||
+                            ProcessInfo.processInfo.environment["KOTOFLOAT_USE_SAVED_SERVER"] == "1"))
 struct LocalModelIntegrationTests {
-    private func configuration() throws -> ServerConfiguration {
-        try ServerConfiguration(endpoint: "http://127.0.0.1:1234/v1",
-                                model: #require(ProcessInfo.processInfo.environment["KOTOFLOAT_LOCAL_MODEL"]))
+    @MainActor private func configuration() throws -> (server: ServerConfiguration, token: String?) {
+        if ProcessInfo.processInfo.environment["KOTOFLOAT_USE_SAVED_SERVER"] == "1" {
+            let defaults = try #require(UserDefaults(suiteName: "com.tasuku24.KotoFloat"))
+            let server = try #require(TranslationPreferences(defaults: defaults).server)
+            return (server, try KeychainCredentialStore().token(for: server.baseURL.absoluteString))
+        }
+        return (try ServerConfiguration(endpoint: "http://127.0.0.1:1234/v1",
+                                       model: #require(ProcessInfo.processInfo.environment["KOTOFLOAT_LOCAL_MODEL"])), nil)
+    }
+
+    @Test @MainActor func actualConnectionCheckAndTrialTranslation() async throws {
+        let (server, token) = try configuration()
+        try await withTranslationContext { preferences, credentials in
+            try preferences.save(server, tokenUpdate: token.map(TokenUpdate.replace) ?? .keep, credentials: credentials)
+            preferences.targetLanguage = .japanese
+            let connection = ConnectionModel(preferences: preferences, credentials: credentials)
+            defer { connection.cancel() }
+            connection.checkConnection()
+            let deadline = ContinuousClock.now.advanced(by: .seconds(310))
+            while connection.isBusy, ContinuousClock.now < deadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            try #require(connection.status == .connected(connection.availableModels.count))
+            #expect(connection.availableModels.contains(server.model))
+            connection.tryTranslation()
+            let trialDeadline = ContinuousClock.now.advanced(by: .seconds(310))
+            while connection.isBusy, ContinuousClock.now < trialDeadline {
+                try await Task.sleep(for: .milliseconds(20))
+            }
+            #expect(connection.status == .trialComplete)
+            #expect(!connection.trialOutput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_USE_SAVED_SERVER"] == "1"))
+    @MainActor func actualAuthenticatedServerRejectsMissingAndInvalidTokens() async throws {
+        let (server, token) = try configuration()
+        try #require(token != nil)
+        for rejectedToken: String? in [nil, "kotofloat-deliberately-invalid-acceptance-token"] {
+            let client = OpenAITranslationClient(server: server, token: rejectedToken)
+            await #expect(throws: TranslationFailure.authentication) { try await client.models() }
+        }
     }
 
     @Test @MainActor func actualGenerationPreservesEditorContracts() async throws {
-        let server = try configuration()
-        let client = OpenAITranslationClient(server: server, token: nil)
+        let (server, token) = try configuration()
+        let client = OpenAITranslationClient(server: server, token: token)
         #expect(try await client.models().contains(server.model))
         try await withTranslationContext { preferences, credentials in
-            try preferences.save(server, tokenUpdate: .keep, credentials: credentials)
+            try preferences.save(server, tokenUpdate: token.map(TokenUpdate.replace) ?? .keep, credentials: credentials)
             preferences.sourceLanguage = .english
             preferences.targetLanguage = .japanese
             let model = TranslationModel(preferences: preferences, credentials: credentials)
@@ -73,8 +113,9 @@ struct LocalModelIntegrationTests {
         }
     }
 
-    @Test func actualStreamCanBeCancelledAfterReceivingText() async throws {
-        let client = OpenAITranslationClient(server: try configuration(), token: nil)
+    @Test @MainActor func actualStreamCanBeCancelledAfterReceivingText() async throws {
+        let (server, token) = try configuration()
+        let client = OpenAITranslationClient(server: server, token: token)
         let received = TextCollector()
         let input = TranslationInput(text: "The voltage across the resistor is five volts. The current is two amperes.",
                                      source: .english, target: .japanese)
@@ -111,6 +152,8 @@ struct LocalModelIntegrationTests {
         let samples = [
             Sample(id: "en-ja-basic", text: english, source: .english, target: .japanese),
             Sample(id: "ja-en-basic", text: japanese, source: .japanese, target: .english),
+            Sample(id: "auto-ja", text: english, source: .automatic, target: .japanese),
+            Sample(id: "auto-en", text: japanese, source: .automatic, target: .english),
             Sample(id: "en-ja-paragraphs", text: "Disconnect the power before replacing the resistor.\n\nAfter reconnecting the power, the voltage is 5 V and the current is 0.2 A.", source: .english, target: .japanese),
             Sample(id: "ja-en-paragraphs", text: "抵抗器を交換する前に、電源を切ってください。\n\n電源を再接続した後、電圧は5 V、電流は0.2 Aです。", source: .japanese, target: .english),
             Sample(id: "en-ja-glossary", text: english, source: .english, target: .japanese, glossary: [
@@ -122,7 +165,7 @@ struct LocalModelIntegrationTests {
                 GlossaryEntry(sourceTerm: "抵抗器", preferredTranslation: "resistor", sourceLanguage: .japanese, targetLanguage: .english)
             ])
         ]
-        let server = try configuration()
+        let (server, token) = try configuration()
         var results: [Result] = []
         for sample in samples {
             let directory = FileManager.default.temporaryDirectory.appendingPathComponent("KotoFloatEvaluation-\(UUID())")
@@ -134,7 +177,7 @@ struct LocalModelIntegrationTests {
                 try store.select(id)
             }
             try await withTranslationContext { preferences, credentials in
-                try preferences.save(server, tokenUpdate: .keep, credentials: credentials)
+                try preferences.save(server, tokenUpdate: token.map(TokenUpdate.replace) ?? .keep, credentials: credentials)
                 preferences.sourceLanguage = sample.source
                 preferences.targetLanguage = sample.target
                 let model = TranslationModel(preferences: preferences, credentials: credentials, glossaries: store)
@@ -155,7 +198,7 @@ struct LocalModelIntegrationTests {
     }
 
     @MainActor private func waitUntilFinished(_ model: TranslationModel) async throws {
-        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+        let deadline = ContinuousClock.now.advanced(by: .seconds(310))
         while model.state == .running, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }

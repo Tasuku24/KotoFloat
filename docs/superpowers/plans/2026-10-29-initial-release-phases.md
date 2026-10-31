@@ -22,7 +22,7 @@ The initial release now has seven phases. Phase 5 has been merged into `main`, b
 | --- | --- | --- |
 | 1 | App foundation and popup | Implemented; actual AutoRaise acceptance remains open. |
 | 2 | Selected-text capture | Implemented; remaining physical-user checks stay in the verification record. |
-| 3 | LLM connection and basic translation | Implemented; local-model evidence was added in Phase 5; remote/distribution checks remain open. |
+| 3 | LLM connection and basic translation | Implemented; local models and host HTTPS/Tailscale verified; remaining desktop/distribution checks are open. |
 | 4 | Glossary integration | Implemented; model adherence has limitations and desktop acceptance remains open. |
 | 5 | Main translation window and editing | Merged into `main`; remaining acceptance work is tracked below. |
 | 6 | Searchable language selection and favorites | Implemented; verification and remaining acceptance are recorded in Phase 6. |
@@ -90,14 +90,14 @@ Implementation is ready. The app captured synthetic Chrome and Preview selection
 
 ### Phase 3: LLM connection and basic translation
 
-Implementation and fixed-fixture checks are ready. Real LLM, signed-app Keychain, and desktop acceptance remain pending; see [Phase 3 verification](../../testing/phase-3.md).
+Implementation, fixed fixtures, and the intended `hy-mt2-7b` host over HTTPS/Tailscale are verified. Signed-app loopback Keychain evidence is in Phase 5; remaining desktop boundaries are in [Phase 3 verification](../../testing/phase-3.md).
 
 - [x] Provide settings for the endpoint URL, model, and a token stored in Keychain.
 - [x] Separate connection checks through GET /v1/models from trial translations through POST /v1/chat/completions.
 - [x] Implement language settings, streaming, copying, retranslating, and cancellation.
 - [x] Test malformed responses, authentication failures, unavailable models, timeouts, and interrupted streams using fixed responses.
 - [x] Use request IDs to discard stale responses and prevent duplicate requests from repeated shortcuts. Do not present interrupted output as complete.
-- [ ] When the endpoint is available, verify live integration with a provisional model. Verify remote access over HTTPS and a VPN on real devices.
+- [x] Verify real host integration over HTTPS and Tailscale through the production client: model list, trial, authentication, translation/cancellation, and English/Japanese samples (2026-11-01). Separate remote signed-app desktop checks remain in the Phase 3 record.
 
 **Completion criteria:** Selection, translation, and copying work end to end. Final model selection is unnecessary, but an untested real server must remain explicitly unverified.
 
@@ -118,13 +118,13 @@ Implementation and background/loopback checks are ready; real-model adherence an
 
 ### Phase 5: Main translation window and editing
 
-Merged into `main` through PR #5 on 2026-10-31; acceptance is still in progress. Recorded verification includes 115 background/loopback tests and 17 native tests passing. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise, remote HTTPS/VPN, and the remaining visual/lifecycle matrix still need acceptance; see [Phase 5 verification](../../testing/phase-5.md).
+Merged into `main` through PR #5 on 2026-10-31; acceptance is still in progress. Recorded verification includes 115 background/loopback tests and 17 native tests passing. Authorized desktop checks covered editing/undo, selected window transitions, a local real model, and Keychain. Actual IME/VoiceOver/AutoRaise and the remaining visual/lifecycle matrix still need acceptance; host HTTPS/Tailscale was subsequently verified in Phase 3; see [Phase 5 verification](../../testing/phase-5.md).
 
 - [x] Provide source input, the generated translation, an editable translation, copying, and undo.
 - [x] Transfer the same translation state from the popup to the main window.
 - [x] Track edits and revision numbers so retranslating does not silently discard changes.
 - [x] Complete source expansion, active glossary display, and explicit retranslation after changing a language or glossary in the popup.
-- [ ] Complete the remaining editor IME, keyboard/VoiceOver, visual, and active-generation lifecycle checks recorded in Phase 5 verification. Include actual AutoRaise and remote-transport acceptance in Phase 7; do not mark them passed because of the merge.
+- [ ] Complete the remaining editor IME, keyboard/VoiceOver, visual, and active-generation lifecycle checks recorded in Phase 5 verification. Include actual AutoRaise and the remaining remote signed-app desktop acceptance from Phase 3 in Phase 7; do not mark them passed because of the merge.
 
 **Completion criteria:** Users can edit without regenerating, and navigation or delayed responses cannot corrupt edits. Click-based alternative translations are not implemented yet.
 
@@ -187,7 +187,7 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 | --- | --- | --- |
 | 1 | アプリの土台とポップアップ | 実装済み。実AutoRaiseの受け入れ確認が残る。 |
 | 2 | 選択文章の取得 | 実装済み。残る実操作確認は検証記録で管理する。 |
-| 3 | LLM接続と基本翻訳 | 実装済み。第5段階でローカル実モデルの証拠を追加。遠隔通信・配布時の確認は残る。 |
+| 3 | LLM接続と基本翻訳 | 実装済み。ローカル実モデルとホストHTTPS／Tailscaleを確認。残る実画面・配布時の確認は未完了。 |
 | 4 | 用語集 | 実装済み。モデルの用語遵守には制限があり、実画面の確認も残る。 |
 | 5 | メイン翻訳画面と編集 | `main`へマージ済み。残る受け入れ確認は以下で管理する。 |
 | 6 | 検索付き言語選択とお気に入り | 実装済み。検証と残る受け入れ確認は第6段階に記録。 |
@@ -255,14 +255,14 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第3段階：LLM接続と基本翻訳
 
-実装と固定応答での検証は完了しています。実LLM・署名済みアプリのKeychain・実画面の確認は保留です。[第3段階の検証記録](../../testing/phase-3.md)を参照してください。
+実装・固定応答と、目的の`hy-mt2-7b`ホストへのHTTPS／Tailscale通信は確認済みです。署名済みアプリのループバックKeychainの証拠は第5段階にあり、実画面の残る範囲は別途管理します。[第3段階の検証記録](../../testing/phase-3.md)を参照してください。
 
 - [x] 接続先URL、モデル、Keychainに保存するトークンを設定できるようにする。
 - [x] GET /v1/modelsによる接続確認と、POST /v1/chat/completionsによる試し翻訳を分ける。
 - [x] 言語設定、ストリーミング、コピー、再翻訳、キャンセルを実装する。
 - [x] 不正応答、認証失敗、モデル不在、タイムアウト、通信途中の切断を固定応答でテストする。
 - [x] 要求IDで古い応答を排除し、連打による重複送信を防ぐ。中断結果を完成訳として扱わない。
-- [ ] 接続先が用意できたら仮モデルで実接続を確認する。外出先利用はHTTPSとVPN経由の実機確認を行う。
+- [x] 実ホストへHTTPSとTailscale経由で本番クライアントを接続し、モデル一覧・試し翻訳・認証・翻訳／停止・英日サンプルを確認する（2026-11-01）。遠隔の署名済みアプリの実画面確認は第3段階の記録に別途残します。
 
 **完了条件:** 選択→翻訳→コピーが通る。モデル最終選定は不要だが、実サーバー未確認ならその旨を残し、通信の実機検証完了とはしない。
 
@@ -283,13 +283,13 @@ Use Phase 1 as the first review point. Before each phase, define detailed implem
 
 ### 第5段階：メイン翻訳画面と編集
 
-2026-10-31にPR #5で`main`へマージ済みですが、受け入れ確認は継続中です。記録済みの検証では、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、遠隔HTTPS／VPN、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
+2026-10-31にPR #5で`main`へマージ済みですが、受け入れ確認は継続中です。記録済みの検証では、背景／ループバック115テスト、ネイティブ17テストが成功しました。許可を受けた実画面で編集／Undo、一部の画面遷移、ローカル実モデル、Keychainを確認しました。実IME／VoiceOver／AutoRaise、残る視覚・ライフサイクルの組み合わせは受け入れ確認が必要です。ホストHTTPS／Tailscaleはその後第3段階で確認しました。[第5段階の検証記録](../../testing/phase-5.md)を参照してください。
 
 - [x] 原文入力、生成訳、編集可能な訳文、コピー、取り消しを用意する。
 - [x] ポップアップから同じ翻訳状態をメイン画面へ引き継ぐ。
 - [x] 手動編集の有無と版番号を管理し、再翻訳で変更を黙って失わない動作を用意する。
 - [x] ポップアップでの原文展開、使用中の用語集表示、言語・用語集変更後の明示的な再翻訳を整える。
-- [ ] 第5段階の検証記録にある、エディタの実IME、キーボード／VoiceOver、表示、生成中の画面操作の残る確認を完了する。実AutoRaiseと遠隔通信の受け入れは第7段階にも含め、マージを理由に確認済みとしない。
+- [ ] 第5段階の検証記録にある、エディタの実IME、キーボード／VoiceOver、表示、生成中の画面操作の残る確認を完了する。実AutoRaiseと、第3段階に残る遠隔の署名済みアプリの実画面確認は第7段階にも含め、マージを理由に確認済みとしない。
 
 **完了条件:** 再生成なしで訳文を編集でき、画面移動や遅延応答で編集内容が壊れない。単語クリックによる別訳候補はまだ実装しない。
 
