@@ -60,11 +60,14 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     @objc private func showEditor() {
         guard let model = popupController?.translation else { return }
         if editorWindow == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1040, height: 720),
-                                  styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1040, height: 620),
+                                  styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
+                                  backing: .buffered, defer: false)
             window.title = L10n.text("editor.title")
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
             window.isReleasedWhenClosed = false
-            window.contentMinSize = CGSize(width: 840, height: 600)
+            window.contentMinSize = CGSize(width: 840, height: 400)
             window.delegate = self
             window.contentView = TranslationEditorView(model: model,
                 openSettings: { [weak self] in self?.showSettings() },
