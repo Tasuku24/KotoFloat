@@ -15,7 +15,16 @@ The popup now presents the translation first, with a solid top toolbar and nativ
 - Added model-backed presentation tests for source-language, target-language, and glossary changes during an active stream. The stale-input notice takes precedence over progress text without starting another request.
 - Review corrected recovery controls scrolling out of view: the compact status/recovery row and pending confirmation now remain outside the reading scroller. Full explanations remain available through result details.
 
-The frame remains stable during streaming and retains the saved size within the new bounds. A 240-point interactive minimum takes precedence over the 70% cap on short displays when it fits; screens shorter than that use their available height. No automatic scroll-to-end is installed. These are code/geometry checks, not proof of live visual or scrolling behavior.
+The initial implementation kept a stable saved height during streaming. The content-driven follow-up below supersedes that sizing policy. No automatic scroll-to-end is installed.
+
+### Content-driven sizing follow-up — 2026-11-02
+
+- The toolbar measures native close/minimize/zoom button clearance, with an 88-point fallback, instead of the overlapping 52-point gutter.
+- Opening uses a compact 200-point frame before pointer/selection placement, preserving saved width and the top edge for previous-position placement. Measured content then fits between 160 points and the existing 600-point/70% display cap. Width changes and screen recovery refit content; unchanged long content also refits when reopened.
+- Toolbar, reading content, status, and confirmation heights are measured without duplicating text rendering. Resize work is coalesced on the main queue, and changes smaller than one point are ignored.
+- Background suite: 140 tests in 22 suites passed. Geometry regressions cover incremental growth, shrinking an old tall frame, caps, invalid measurements, compact opening placement, and native-button clearance.
+- Separately announced native tests: long content grows to the cap and scrolls, unchanged long content reopens at the cap, short content shrinks, close/reopen preserves width/top edge, and fake selected-text capture preserves window identity/width and source-app focus. All three selected native tests passed. Other focus/IME/VoiceOver/AutoRaise tests were not run.
+- Debug and Release builds succeeded. The final Release app's icon resources and strict signature were verified, then the app was restarted after graceful termination. A real short sample screenshot confirmed the title clears the visible window controls and the popup fits its short content. The temporary sample/settings windows were closed; no translation request was sent for this check.
 
 ### Remaining explicit desktop acceptance
 
@@ -45,7 +54,16 @@ After the user requested a restart and reported missing icons, the approved Grap
 - 翻訳中の翻訳元・翻訳先・用語集変更について、実際のモデルを使う表示判定テストを追加した。追加要求を送らず、進捗より条件変更の注意を優先する。
 - レビューで、復旧操作が本文と一緒に画面外へ流れる点を修正した。簡潔な状態・復旧操作と保留中の確認は本文のスクロール領域の外に置き、詳しい説明は結果詳細から開く。
 
-翻訳中は枠を伸縮させず、上限内の保存サイズを維持する。小画面で収まる場合は操作可能な最小高240ポイントを70%制限より優先し、それより小さい画面では利用可能な高さに収める。末尾への自動スクロールは追加していない。これらはコードと配置計算の確認であり、実画面の見た目やスクロールを確認したものではない。
+初回実装は翻訳中に保存した高さを維持していたが、以下の本文量に応じた調整でその方針を置き換えた。末尾への自動スクロールは追加していない。
+
+### 本文量に応じた高さの修正 — 2026-11-02
+
+- 上部操作列の余白を、重なりの原因だった52ポイント固定から、標準の閉じる・最小化・拡大ボタンの実際の位置に応じた値へ変更した。測定前は88ポイントを確保する。
+- 呼び出し時の配置計算から初期高200ポイントを使い、保存した幅と前回位置の上端を維持する。その後、本文の実測値に応じて最小160ポイントから既存の600ポイント／画面70%の上限まで調整する。幅変更・画面復旧時と、同じ長文を開き直す場合も再調整する。
+- 文字を二重描画せず、上部・本文・状態・確認の高さを測定する。メインキューで更新をまとめ、1ポイント未満の変化は枠へ適用しない。
+- バックグラウンドテストは22スイート・140件が成功した。段階的な伸長、大きな旧枠からの縮小、上限、不正値、小さい初期枠での配置、標準ボタンとの間隔を回帰テストした。
+- 独立して事前に伝えたネイティブテストでは、長文の上限までの伸長とスクロール、同じ長文の再表示、短文への縮小、閉じて開く際の幅・上端維持、模擬取得時のウィンドウ・幅・元アプリのフォーカス維持を確認した。選択した3件が成功した。他のフォーカス・IME・VoiceOver・AutoRaiseのテストは実行していない。
+- DebugとReleaseのビルドが成功した。Releaseアプリのアイコン同梱と厳密な署名検証後、正常終了・再起動した。短いサンプルの実画面で、タイトルが表示中のウィンドウ操作部と重ならず、本文量に応じて低く収まることを確認した。確認用のサンプルと設定画面は閉じており、この確認では翻訳要求を送っていない。
 
 ### 独立した実画面の残確認
 

@@ -35,7 +35,7 @@ struct PopupContentView: View {
                 .accessibilityLabel(L10n.text("popup.more"))
             }
 
-            Divider()
+            Divider().reportPopupHeight()
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text(sample.translation).font(.system(size: 17)).lineSpacing(6)
@@ -49,6 +49,7 @@ struct PopupContentView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(20)
+                .reportPopupHeight()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("sampleScrollView")

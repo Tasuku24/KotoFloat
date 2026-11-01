@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PopupToolbar<Controls: View>: View {
     @ViewBuilder var controls: Controls
+    @State private var leadingInset = PopupGeometry.toolbarLeadingInset(for: [])
 
     var body: some View {
         HStack(spacing: 8) {
@@ -13,11 +14,62 @@ struct PopupToolbar<Controls: View>: View {
         }
         .buttonStyle(.borderless)
         .controlSize(.small)
-        .padding(.leading, 52).padding(.trailing, 12)
+        .padding(.leading, leadingInset).padding(.trailing, 12)
         .frame(height: 48)
         .background(Color(nsColor: .windowBackgroundColor))
         .accessibilityElement(children: .contain)
         .accessibilityLabel(L10n.text("popup.toolbar"))
+        .background {
+            WindowButtonClearanceReader { leadingInset = $0 }.frame(width: 0, height: 0)
+        }
+        .reportPopupHeight()
+    }
+}
+
+private struct WindowButtonClearanceReader: NSViewRepresentable {
+    let onChange: @MainActor (CGFloat) -> Void
+
+    func makeNSView(context: Context) -> WindowButtonClearanceView {
+        WindowButtonClearanceView(onChange: onChange)
+    }
+
+    func updateNSView(_ view: WindowButtonClearanceView, context: Context) {
+        view.onChange = onChange
+    }
+}
+
+private final class WindowButtonClearanceView: NSView {
+    var onChange: @MainActor (CGFloat) -> Void
+    private var lastInset: CGFloat?
+
+    init(onChange: @escaping @MainActor (CGFloat) -> Void) {
+        self.onChange = onChange
+        super.init(frame: .zero)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        updateClearance()
+    }
+
+    override func layout() {
+        super.layout()
+        updateClearance()
+    }
+
+    private func updateClearance() {
+        guard let window, let contentView = window.contentView else { return }
+        let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        let frames = buttons.compactMap { type -> CGRect? in
+            guard let button = window.standardWindowButton(type), !button.isHidden else { return nil }
+            return button.convert(button.bounds, to: contentView)
+        }
+        let inset = PopupGeometry.toolbarLeadingInset(for: frames)
+        guard inset != lastInset else { return }
+        lastInset = inset
+        DispatchQueue.main.async { [weak self] in self?.onChange(inset) }
     }
 }
 

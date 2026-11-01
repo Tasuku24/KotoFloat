@@ -9,6 +9,8 @@ final class PopupController: NSObject, NSWindowDelegate {
     let capture = CaptureModel()
     let translation: TranslationModel?
     private let captureEnvironment: any CaptureEnvironment
+    private var measuredContentHeight: CGFloat?
+    private var contentResizeScheduled = false
     var openSettings: (() -> Void)?
     var openGlossaries: (() -> Void)?
     var openEditor: (() -> Void)?
@@ -32,7 +34,8 @@ final class PopupController: NSObject, NSWindowDelegate {
             toggleTopmost: { [weak self] in
                 guard let self else { return }
                 setAlwaysOnTop(!preferences.alwaysOnTop)
-            }, openSettings: { [weak self] in self?.openSettings?() }, openGlossaries: { [weak self] in self?.openGlossaries?() }, openEditor: { [weak self] in self?.openEditor?() }))
+            }, openSettings: { [weak self] in self?.openSettings?() }, openGlossaries: { [weak self] in self?.openGlossaries?() }, openEditor: { [weak self] in self?.openEditor?() },
+            onContentHeightChange: { [weak self] in self?.updateContentHeight($0) }))
         hostingView.sizingOptions = []
         panel.contentView = hostingView
         applyWindowLevel()
@@ -48,23 +51,16 @@ final class PopupController: NSObject, NSWindowDelegate {
     private func showPopup(selectionBounds: CGRect? = nil) {
         let screens = NSScreen.screens.map(\.visibleFrame)
         let pointer = NSEvent.mouseLocation
-        let frame: CGRect
-        switch preferences.placement {
-        case .previousPosition:
-            frame = PopupGeometry.restore(preferences.savedFrame, screens: screens, pointer: pointer)
-        case .nearPointer:
-            frame = PopupGeometry.nearPointer(size: preferences.savedFrame?.size ?? PopupGeometry.defaultSize,
-                                             screens: screens, pointer: pointer)
-        case .nearSelection:
-            frame = PopupGeometry.nearSelection(selectionBounds,
-                size: preferences.savedFrame?.size ?? PopupGeometry.defaultSize, screens: screens, pointer: pointer)
-        }
+        let frame = PopupGeometry.openingFrame(preferences.savedFrame, placement: preferences.placement,
+            selectionBounds: selectionBounds, screens: screens, pointer: pointer)
         applyFrame(frame)
         applyWindowLevel()
         // Keep the source application's keyboard focus until the user clicks the panel.
         // 利用者がパネルをクリックするまで、元アプリのキーボードフォーカスを維持する。
         panel.orderFrontRegardless()
         preferences.savedFrame = panel.frame
+        panel.contentView?.layoutSubtreeIfNeeded()
+        if let measuredContentHeight { updateContentHeight(measuredContentHeight) }
     }
 
     func captureSelectedText() {
@@ -117,11 +113,13 @@ final class PopupController: NSObject, NSWindowDelegate {
         let frame = PopupGeometry.restore(panel.frame, screens: NSScreen.screens.map(\.visibleFrame),
                                           pointer: NSEvent.mouseLocation)
         applyFrame(frame)
+        fitContentHeight()
         preferences.savedFrame = panel.frame
     }
 
     func windowDidMove(_ notification: Notification) { saveFrameIfVisible() }
     func windowDidResize(_ notification: Notification) { saveFrameIfVisible() }
+    func windowDidEndLiveResize(_ notification: Notification) { fitContentHeight() }
     func windowDidChangeScreen(_ notification: Notification) { recoverVisibleFrame() }
     func windowWillClose(_ notification: Notification) {
         preferences.savedFrame = panel.frame
@@ -140,6 +138,29 @@ final class PopupController: NSObject, NSWindowDelegate {
         panel.maxSize = CGSize(width: .greatestFiniteMagnitude,
             height: screen.map { PopupGeometry.maximumHeight(on: $0) } ?? PopupGeometry.maximumHeight)
         if frame != panel.frame { panel.setFrame(frame, display: panel.isVisible) }
+    }
+
+    private func updateContentHeight(_ height: CGFloat) {
+        guard height.isFinite, height > 0 else { return }
+        measuredContentHeight = height
+        guard panel.isVisible, !contentResizeScheduled else { return }
+        contentResizeScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            contentResizeScheduled = false
+            fitContentHeight()
+        }
+    }
+
+    private func fitContentHeight() {
+        guard panel.isVisible, !panel.inLiveResize, let measuredContentHeight else { return }
+        let chromeHeight = max(0, panel.frame.height - (panel.contentView?.bounds.height ?? panel.frame.height))
+        let frame = PopupGeometry.fittingContentHeight(measuredContentHeight + chromeHeight,
+            to: panel.frame, screens: NSScreen.screens.map(\.visibleFrame), pointer: NSEvent.mouseLocation)
+        if abs(frame.height - panel.frame.height) >= 1 || frame.origin != panel.frame.origin {
+            applyFrame(frame)
+            preferences.savedFrame = panel.frame
+        }
     }
 
     private func applyWindowLevel() {

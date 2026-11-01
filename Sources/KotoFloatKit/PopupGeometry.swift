@@ -2,9 +2,36 @@ import Foundation
 import CoreGraphics
 
 enum PopupGeometry {
-    static let defaultSize = CGSize(width: 480, height: 400)
-    static let minimumSize = CGSize(width: 360, height: 240)
+    static let defaultSize = CGSize(width: 480, height: 200)
+    static let minimumSize = CGSize(width: 360, height: 160)
     static let maximumHeight: CGFloat = 600
+
+    static func openingFrame(_ saved: CGRect?, placement: PopupPlacement, selectionBounds: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        let saved = saved.flatMap { isUsable($0) ? $0 : nil }
+        let size = CGSize(width: saved?.width ?? defaultSize.width, height: defaultSize.height)
+        switch placement {
+        case .previousPosition:
+            let compact = saved.map { CGRect(x: $0.minX, y: $0.maxY - size.height, width: size.width, height: size.height) }
+            return restore(compact, screens: screens, pointer: pointer)
+        case .nearPointer:
+            return nearPointer(size: size, screens: screens, pointer: pointer)
+        case .nearSelection:
+            return nearSelection(selectionBounds, size: size, screens: screens, pointer: pointer)
+        }
+    }
+
+    static func fittingContentHeight(_ height: CGFloat, to frame: CGRect, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        guard height.isFinite, height >= 0, isUsable(frame) else { return restore(frame, screens: screens, pointer: pointer) }
+        let screen = screen(for: frame, screens: screens, pointer: pointer)
+        let limit = screen.map { maximumHeight(on: $0) } ?? maximumHeight
+        let fittedHeight = min(max(ceil(height), minimumSize.height), limit)
+        let fitted = CGRect(x: frame.minX, y: frame.maxY - fittedHeight, width: frame.width, height: fittedHeight)
+        return screen.map { clamp(fitted, to: $0) } ?? fitted
+    }
+
+    static func toolbarLeadingInset(for buttons: [CGRect]) -> CGFloat {
+        max(88, (buttons.filter(isUsable).map(\.maxX).max() ?? 0) + 12)
+    }
 
     static func maximumHeight(on screen: CGRect) -> CGFloat {
         min(maximumHeight, max(minimumSize.height, screen.height * 7 / 10), screen.height)

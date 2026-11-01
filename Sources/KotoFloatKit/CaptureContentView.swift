@@ -9,6 +9,7 @@ struct PopupRootView: View {
     let openSettings: () -> Void
     var openGlossaries: () -> Void = {}
     var openEditor: () -> Void = {}
+    var onContentHeightChange: @MainActor (CGFloat) -> Void = { _ in }
 
     var body: some View {
         Group {
@@ -21,6 +22,9 @@ struct PopupRootView: View {
             }
         }
         .environment(\.locale, AppLocalization.shared.locale)
+        .onPreferenceChange(PopupContentHeightKey.self) { [onContentHeightChange] height in
+            Task { @MainActor in onContentHeightChange(height) }
+        }
     }
 }
 
@@ -41,23 +45,26 @@ struct CaptureContentView: View {
             TranslationPopupToolbar(capture: model, preferences: preferences, translation: translation,
                 showsSource: $showsSource, showsDetails: $showsDetails, toggleTopmost: toggleTopmost,
                 openSettings: openSettings, openGlossaries: openGlossaries, openEditor: openEditor)
-            Divider()
+            Divider().reportPopupHeight()
             if case .captured = model.state, let translation {
                 PopupTranslationStatusView(model: translation, openSettings: openSettings) { showsDetails = true }
+                    .reportPopupHeight()
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     content
                 }
                 .frame(maxWidth: .infinity, alignment: .leading).padding(20)
+                .reportPopupHeight()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("captureScrollView")
             .id(translation?.documentID)
             if let translation, translation.pendingAction != nil {
-                Divider()
+                Divider().reportPopupHeight()
                 TranslationConfirmationView(model: translation)
                     .padding(12)
+                    .reportPopupHeight()
             }
         }
         .background(.background)

@@ -8,7 +8,7 @@ Show the streaming translation first. Hide the original completely until explici
 
 Move favorites into the target-language picker while retaining focused Command-1–5 shortcuts. Put source-language selection, retranslation, original visibility, result details, glossary selection/management, manual entry, pinning, and settings in the more menu. Keep stop, failure recovery, changed-input warnings, glossary review warnings, and destructive confirmations visible when relevant. Language changes retain the existing next-request behavior, with an inline retranslation action when the result is stale.
 
-Keep a stable, resizable frame during streaming; do not auto-scroll to the end. Cap the frame at 600 points or 70% of the current display's visible height, whichever is smaller, while retaining the 240-point interactive minimum when the screen permits. Restore and display-change recovery obey the same bound. Only the reading area scrolls; controls and pending confirmations remain outside it. Preserve saved sizes within these bounds.
+Following the user's overlap/height report, use content-driven height instead of retaining a tall saved frame. Start at 200 points with a 160-point minimum, preserve saved width/position, and grow with the measured content up to 600 points or 70% of the current display's visible height. Retain the interactive minimum when the screen permits. Keep the top edge anchored when space permits, and do not auto-scroll to the end. Opening placement and display-change recovery obey the same bounds. Only the reading area scrolls; controls and pending confirmations remain outside it. Measure native window-button clearance rather than assuming a fixed toolbar gutter.
 
 Background verification excludes native-window tests and live desktop interaction. Visual appearance, actual scrolling/focus, VoiceOver, and AutoRaise remain explicit follow-up checks.
 
@@ -20,6 +20,6 @@ Background verification excludes native-window tests and live desktop interactio
 
 お気に入りを翻訳先の言語選択内へ移し、フォーカス中のCommand-1〜5を維持する。翻訳元言語、再翻訳、原文表示、結果の詳細、用語集の選択・管理、手入力、最前面固定、設定はその他メニューにまとめる。停止、失敗時の復旧、入力変更・用語集の注意、破棄確認は必要時にその場で表示する。言語変更は既存どおり次回リクエストに適用し、結果と異なる場合はその場に再翻訳操作を表示する。
 
-翻訳中はサイズ変更可能な枠を安定させ、末尾へ自動スクロールしない。枠の高さは600ポイントと現在の画面の作業領域の70%の小さい方を上限とし、画面に収まる場合は操作可能な最小高240ポイントを維持する。復元と画面変更時の復旧にも同じ上限を適用する。本文だけをスクロールし、操作部と保留中の確認はその外側に置く。上限内の保存サイズを維持する。
+利用者からの重なり・高さの報告を受け、大きな保存枠の維持から本文量に応じた高さへ変更する。初期高200ポイント・最小高160ポイントとし、保存した幅・位置を維持する。本文の測定値に応じて、600ポイントまたは画面作業領域の70%まで伸びる。画面に収まる場合は操作可能な最小高を維持する。余地があれば上端を維持し、末尾へ自動スクロールしない。呼び出し時の配置と画面変更時の復旧にも同じ上限を適用する。本文だけをスクロールし、操作部と保留中の確認はその外側に置く。上部操作列の余白は固定値とせず、標準のウィンドウボタンの実際の位置から求める。
 
 バックグラウンド検証ではネイティブウィンドウテストと実画面操作を除外する。見た目、実際のスクロール・フォーカス、VoiceOver、AutoRaiseは独立した確認として残す。
