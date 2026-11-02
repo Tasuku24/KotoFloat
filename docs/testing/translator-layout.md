@@ -26,6 +26,16 @@ The native test covers the Translator, standard popup panel, and AutoRaise-compa
 
 The regression test failed before the fix and passed afterward for all three window variants. The 140-test background suite, Debug build, strict signature verification, and whitespace check passed. The real app was gracefully restarted. During the live capture, macOS displayed its screen-sharing indicator in the native-button area, so that capture does not provide an unobstructed visual comparison of the buttons.
 
+### Post-display reflow correction (2026-11-03)
+
+The user subsequently confirmed that the visible buttons were still too high. Runtime diagnostics reproduced AppKit restoring all three button centers to 16 points after the toolbar had aligned them at 24 points. The original test only checked content layout and resize, so it did not catch this later native-window update.
+
+Observe the window's update and key-activation notifications as well as resizing. The existing coalesced main-queue adjustment then restores alignment after AppKit's titlebar reflow. No timers, polling, new input monitors, or replacement window controls are involved. Temporary coordinate logging was removed after checking the real app: the post-update centers returned to 24 points and remained there in subsequent updates.
+
+The regression now covers hidden and ordered windows for all three variants at two sizes. It replays the measured native position reset, calls the real AppKit window update, and checks alignment plus hit testing for the native controls and language picker. Test windows are transparent, ignore mouse input, and do not become key; macOS may constrain an ordered window back onto a display despite an offscreen origin. Full-screen, VoiceOver, and physical pointer-action acceptance remain separate.
+
+Final verification passed: all three native regression cases, 140 background tests in 22 suites, Debug build, strict signature verification, and whitespace checks. The final app, with temporary diagnostic logging removed, was restarted and the Translator displayed.
+
 ## 日本語
 
 利用者は2026年11月2日に、生成した3案目の左右比較レイアウトを選択した。変更対象はTranslatorの編集ウィンドウのみとする。ポップアップの現在のレイアウト、原文の初期非表示、本文に応じた高さ、フォーカス動作は維持する。Liquid Glassは使用しない。
@@ -51,3 +61,13 @@ Translatorとポップアップの両方で、標準の閉じる・最小化・�
 ネイティブテストはTranslator、通常のポップアップパネル、AutoRaise互換のポップアップウィンドウを、それぞれ2種類のサイズで確認する。ウィンドウを表示・フォーカスせずに、整列と標準のクリック判定を確認する。フルスクリーン、VoiceOver、実際のマウス操作の動作確認を意味するものではない。
 
 回帰テストは修正前に失敗し、修正後は3種類すべてで成功した。通常の140件のテスト、Debugビルド、厳密な署名確認、空白検査も成功した。実アプリは通常の終了操作を経て再起動した。実画面の取得中はmacOSの画面共有インジケータが標準ボタンの場所に表示されたため、その取得画像だけではボタンを遮らない見た目の比較はできていない。
+
+### 表示後の再配置への対応（2026年11月3日）
+
+その後、利用者から実画面のボタンがまだ上にあるとの報告を受けた。実アプリの座標記録により、上部バーで中心を24ポイントに揃えた後、AppKitが3つのボタンの中心を16ポイントに戻すことを再現した。元のテストは本文の配置とリサイズだけを確認しており、その後の標準ウィンドウの更新を捉えていなかった。
+
+リサイズに加え、ウィンドウの描画更新とキー状態への切り替えの通知を監視する。既存のメインキューでまとめる調整処理により、AppKitのタイトルバー再配置後にも整列を回復させる。タイマー、ポーリング、新しい入力監視、独自ボタンへの置き換えは追加しない。実アプリで更新後に中心が24ポイントへ戻り、続く更新でも維持されることを確認した後、一時的な座標記録を削除した。
+
+回帰テストは非表示と表示済みの両方について、3種類のウィンドウを2つのサイズで確認する。実測した標準ボタンの位置の巻き戻りを再現し、実際のAppKitのウィンドウ更新を呼び出してから、整列と標準ボタン・言語選択のクリック判定を確認する。検証ウィンドウは透明にし、マウス入力を受け取らず、キー状態にしない。画面外の座標を指定しても、macOSが表示時に画面内へ戻す場合があるためである。フルスクリーン、VoiceOver、実際のマウス操作の動作確認は独立した確認として残る。
+
+最終確認では、3種類のネイティブ回帰テスト、22スイート・140件の通常テスト、Debugビルド、厳密な署名確認、空白検査が成功した。一時的な診断記録を外した最終版を再起動し、Translatorを表示した。

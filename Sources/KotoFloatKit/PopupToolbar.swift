@@ -55,8 +55,11 @@ private final class WindowButtonClearanceView: NSView {
         super.viewDidMoveToWindow()
         NotificationCenter.default.removeObserver(self)
         if let window {
+            // AppKit can reset native button positions after content layout without resizing.
+            // AppKitは本文のリサイズを伴わない描画更新でも標準ボタンの位置を戻すことがある。
             for name in [NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
-                         NSWindow.didExitFullScreenNotification] {
+                         NSWindow.didExitFullScreenNotification, NSWindow.didUpdateNotification,
+                         NSWindow.didBecomeKeyNotification] {
                 NotificationCenter.default.addObserver(self, selector: #selector(windowLayoutChanged), name: name, object: window)
             }
         }
