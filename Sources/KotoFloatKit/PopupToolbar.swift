@@ -35,12 +35,14 @@ private struct WindowButtonClearanceReader: NSViewRepresentable {
 
     func updateNSView(_ view: WindowButtonClearanceView, context: Context) {
         view.onChange = onChange
+        view.scheduleUpdate()
     }
 }
 
 private final class WindowButtonClearanceView: NSView {
     var onChange: @MainActor (CGFloat) -> Void
     private var lastInset: CGFloat?
+    private var updateScheduled = false
 
     init(onChange: @escaping @MainActor (CGFloat) -> Void) {
         self.onChange = onChange
@@ -51,17 +53,53 @@ private final class WindowButtonClearanceView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        updateClearance()
+        NotificationCenter.default.removeObserver(self)
+        if let window {
+            for name in [NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification,
+                         NSWindow.didExitFullScreenNotification] {
+                NotificationCenter.default.addObserver(self, selector: #selector(windowLayoutChanged), name: name, object: window)
+            }
+        }
+        scheduleUpdate()
     }
 
     override func layout() {
         super.layout()
-        updateClearance()
+        scheduleUpdate()
+    }
+
+    @objc private func windowLayoutChanged(_ notification: Notification) { scheduleUpdate() }
+
+    func scheduleUpdate() {
+        guard window != nil, !updateScheduled else { return }
+        updateScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            updateScheduled = false
+            updateClearance()
+        }
     }
 
     private func updateClearance() {
         guard let window, let contentView = window.contentView else { return }
         let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        if window.styleMask.contains(.fullSizeContentView), !window.styleMask.contains(.fullScreen) {
+            // The zero-size reader sits at the toolbar's center. Keep native controls on
+            // that same line without changing their horizontal spacing or actions.
+            // サイズ0のリーダーは上部バーの中央にある。横の間隔と操作を維持し、
+            // 標準ウィンドウボタンをその中心線に揃える。
+            let centerY = convert(bounds, to: contentView).midY
+            for type in buttons {
+                guard let button = window.standardWindowButton(type), !button.isHidden,
+                      let parent = button.superview else { continue }
+                let current = button.convert(button.bounds, to: contentView)
+                let center = parent.convert(NSPoint(x: current.midX, y: centerY), from: contentView)
+                let y = center.y - button.bounds.midY
+                if abs(button.frame.minY - y) > 0.5 {
+                    button.setFrameOrigin(NSPoint(x: button.frame.minX, y: y))
+                }
+            }
+        }
         let frames = buttons.compactMap { type -> CGRect? in
             guard let button = window.standardWindowButton(type), !button.isHidden else { return nil }
             return button.convert(button.bounds, to: contentView)
