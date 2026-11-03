@@ -36,6 +36,10 @@ The regression now covers hidden and ordered windows for all three variants at t
 
 Final verification passed: all three native regression cases, 140 background tests in 22 suites, Debug build, strict signature verification, and whitespace checks. The final app, with temporary diagnostic logging removed, was restarted and the Translator displayed.
 
+### Leading margin refinement (2026-11-03)
+
+The user supplied ChatGPT's titlebar as a spacing reference. Increase the leading edge of the native button group from approximately 9 to 16 points by translating the group together. Preserve button size, native spacing, the toolbar's existing vertical center, and title clearance. The same placement runs after AppKit updates in the Translator and both popup modes. The native regression checks the 16-point margin, original button sizes and offsets, alignment, and hit testing before and after replaying native horizontal/vertical resets.
+
 ## 日本語
 
 利用者は2026年11月2日に、生成した3案目の左右比較レイアウトを選択した。変更対象はTranslatorの編集ウィンドウのみとする。ポップアップの現在のレイアウト、原文の初期非表示、本文に応じた高さ、フォーカス動作は維持する。Liquid Glassは使用しない。
@@ -71,3 +75,7 @@ Translatorとポップアップの両方で、標準の閉じる・最小化・�
 回帰テストは非表示と表示済みの両方について、3種類のウィンドウを2つのサイズで確認する。実測した標準ボタンの位置の巻き戻りを再現し、実際のAppKitのウィンドウ更新を呼び出してから、整列と標準ボタン・言語選択のクリック判定を確認する。検証ウィンドウは透明にし、マウス入力を受け取らず、キー状態にしない。画面外の座標を指定しても、macOSが表示時に画面内へ戻す場合があるためである。フルスクリーン、VoiceOver、実際のマウス操作の動作確認は独立した確認として残る。
 
 最終確認では、3種類のネイティブ回帰テスト、22スイート・140件の通常テスト、Debugビルド、厳密な署名確認、空白検査が成功した。一時的な診断記録を外した最終版を再起動し、Translatorを表示した。
+
+### 左余白の調整（2026年11月3日）
+
+利用者が余白の参考として添付したChatGPTのタイトルバーに合わせ、標準ボタン全体を同じ量だけ移動し、左端の余白を約9ポイントから16ポイントへ増やす。ボタンの大きさ、標準の間隔、上部バーの現在の縦の中心線、タイトルとの重なり防止は維持する。Translatorと2種類のポップアップで、AppKit更新後にも同じ配置を適用する。ネイティブ回帰テストで16ポイントの左余白、元のボタンの大きさと相対位置、縦の整列、クリック判定を、標準の横位置・縦位置への巻き戻りの前後で確認する。

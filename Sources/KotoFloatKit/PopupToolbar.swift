@@ -85,28 +85,27 @@ private final class WindowButtonClearanceView: NSView {
 
     private func updateClearance() {
         guard let window, let contentView = window.contentView else { return }
-        let buttons: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        let types: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
+        let buttons = types.compactMap { window.standardWindowButton($0) }.filter { !$0.isHidden }
         if window.styleMask.contains(.fullSizeContentView), !window.styleMask.contains(.fullScreen) {
-            // The zero-size reader sits at the toolbar's center. Keep native controls on
-            // that same line without changing their horizontal spacing or actions.
-            // サイズ0のリーダーは上部バーの中央にある。横の間隔と操作を維持し、
-            // 標準ウィンドウボタンをその中心線に揃える。
+            // Center native controls on the toolbar with a 16-point leading margin.
+            // Move the group together to preserve native spacing and actions.
+            // 標準ボタンを上部バーの中心線と左余白16ポイントに揃える。
+            // 全体を同じ量だけ移動し、標準の間隔と操作を維持する。
             let centerY = convert(bounds, to: contentView).midY
-            for type in buttons {
-                guard let button = window.standardWindowButton(type), !button.isHidden,
-                      let parent = button.superview else { continue }
+            let leftEdge = buttons.map { $0.convert($0.bounds, to: contentView).minX }.min() ?? 16
+            let offsetX = 16 - leftEdge
+            for button in buttons {
+                guard let parent = button.superview else { continue }
                 let current = button.convert(button.bounds, to: contentView)
-                let center = parent.convert(NSPoint(x: current.midX, y: centerY), from: contentView)
-                let y = center.y - button.bounds.midY
-                if abs(button.frame.minY - y) > 0.5 {
-                    button.setFrameOrigin(NSPoint(x: button.frame.minX, y: y))
+                let center = parent.convert(NSPoint(x: current.midX + offsetX, y: centerY), from: contentView)
+                let origin = NSPoint(x: center.x - button.bounds.midX, y: center.y - button.bounds.midY)
+                if abs(button.frame.minX - origin.x) > 0.5 || abs(button.frame.minY - origin.y) > 0.5 {
+                    button.setFrameOrigin(origin)
                 }
             }
         }
-        let frames = buttons.compactMap { type -> CGRect? in
-            guard let button = window.standardWindowButton(type), !button.isHidden else { return nil }
-            return button.convert(button.bounds, to: contentView)
-        }
+        let frames = buttons.map { $0.convert($0.bounds, to: contentView) }
         let inset = PopupGeometry.toolbarLeadingInset(for: frames)
         guard inset != lastInset else { return }
         lastInset = inset
