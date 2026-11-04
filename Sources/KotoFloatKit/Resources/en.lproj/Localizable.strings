@@ -117,6 +117,7 @@
 "translation.cancelled" = "Stopped. Any text shown is incomplete.";
 "translation.incomplete" = "Translation did not complete.";
 "translation.cancel" = "Stop";
+"translation.stopHelp" = "Stop translation";
 "translation.retranslate" = "Retranslate";
 "translation.copy" = "Copy translation";
 "translation.copied" = "Copied";
@@ -215,6 +216,11 @@
 "editor.swap" = "Swap languages and text";
 "editor.swapHint" = "Choose an explicit source language and translate first. The current translation becomes the new source; Translate sends it.";
 "editor.hint" = "Translate sends the source to your configured server. Edit completed translations directly. Drafts stay in memory until you quit.";
+"editor.sourcePlaceholder" = "Type or paste text to translate…";
+"editor.resultPlaceholder" = "Your translation appears here";
+"editor.resultGuidance" = "Choose a language above, then select Translate.";
+"editor.copy" = "Copy";
+"editor.copyDone" = "Copied";
 "editor.sourceChanged" = "The source has changed. The displayed result still belongs to the previous source; translate to update it.";
 "editor.requestSource" = "Source used for this result";
 "editor.requestDirection" = "Result direction: %@ → %@";

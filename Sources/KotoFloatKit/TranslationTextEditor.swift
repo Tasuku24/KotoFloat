@@ -9,6 +9,7 @@ struct TranslationTextEditor: NSViewRepresentable {
     let undoManager: UndoManager
     var backgroundColor: NSColor = .textBackgroundColor
     var fontSize: CGFloat = 17
+    var help: String?
     let onChange: (String) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -28,10 +29,10 @@ struct TranslationTextEditor: NSViewRepresentable {
         view.font = .systemFont(ofSize: fontSize)
         view.textColor = .textColor
         view.backgroundColor = backgroundColor
-        view.textContainerInset = NSSize(width: 20, height: 12)
+        view.textContainerInset = NSSize(width: 24, height: 18)
         let paragraph = NSMutableParagraphStyle()
-        paragraph.lineSpacing = 6
-        paragraph.paragraphSpacing = 12
+        paragraph.lineSpacing = 8
+        paragraph.paragraphSpacing = 16
         view.defaultParagraphStyle = paragraph
         view.typingAttributes[.paragraphStyle] = paragraph
         view.isVerticallyResizable = true
@@ -54,6 +55,7 @@ struct TranslationTextEditor: NSViewRepresentable {
         view.isEditable = editable
         view.isSelectable = true
         view.setAccessibilityLabel(label)
+        view.setAccessibilityHelp(help)
         let newDocument = context.coordinator.documentID != documentID
         if newDocument || view.string != text {
             let selection = view.selectedRange()

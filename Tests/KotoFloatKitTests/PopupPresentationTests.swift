@@ -4,7 +4,7 @@ import Testing
 
 @MainActor struct PopupPresentationTests {
     @Test(arguments: [true, false])
-    func changedLanguageRemainsVisibleWhileOldRequestStreams(changeSource: Bool) async throws {
+    func normalLoadingHasNoBannerButChangedLanguageRemainsVisible(changeSource: Bool) async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -12,7 +12,7 @@ import Testing
             model.start(text: CapturedText(text: "Synthetic", source: nil, bounds: nil, method: .manual))
             await waitFor { await service.count == 1 }
             let view = PopupTranslationStatusView(model: model, openSettings: {}, showDetails: {})
-            #expect(view.notice == L10n.text("translation.working"))
+            #expect(view.notice == nil)
             if changeSource { preferences.sourceLanguage = .english }
             else { preferences.targetLanguage = .french }
             #expect(model.state == .running)

@@ -45,22 +45,13 @@ struct TranslationEditorView: View {
 
     private var toolbar: some View {
         PopupToolbar {
-            if !showsSource {
-                Button { showsSource = true } label: {
-                    Image(systemName: "sidebar.left").frame(width: 26, height: 28)
-                }
-                .help(L10n.text("popup.showSource"))
-                .accessibilityLabel(L10n.text("popup.showSource"))
+            Button { showsSource.toggle() } label: {
+                Label(L10n.text("editor.source"), systemImage: "sidebar.left")
+                    .font(.system(size: 14)).frame(minHeight: 36)
+                    .contentShape(Rectangle())
             }
-            LanguagePicker(label: L10n.text("translation.to"), selection: model.preferences.targetLanguage,
-                favoriteLanguages: model.preferences.favoriteLanguages) { model.preferences.targetLanguage = $0 }
-                .frame(minWidth: 80, idealWidth: 120, maxWidth: 160).frame(height: 26)
-            Button { copied = model.copyResult(to: .general) } label: {
-                Image(systemName: copied ? "checkmark" : "doc.on.doc").frame(width: 26, height: 28)
-            }
-            .disabled(!model.canCopy)
-            .help(L10n.text(copied ? "translation.copied" : "translation.copy"))
-            .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
+            .help(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
+            .accessibilityLabel(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
             TranslationEditorMenu(model: model, showsSource: $showsSource, showsDetails: $showsDetails,
                 glossaryFailure: $glossaryFailure, openSettings: openSettings, openGlossaries: openGlossaries)
         }
@@ -69,18 +60,22 @@ struct TranslationEditorView: View {
     private var sourcePane: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                Text(L10n.text("editor.source")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(L10n.text("editor.source")).font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
                 LanguagePicker(label: L10n.text("translation.from"), selection: model.preferences.sourceLanguage,
-                    includeAutomatic: true) { model.preferences.sourceLanguage = $0 }
-                    .frame(minWidth: 60, maxWidth: 150).frame(height: 26)
+                    includeAutomatic: true, controlSize: .large, fontSize: 16) { model.preferences.sourceLanguage = $0 }
+                    .frame(minWidth: 90, maxWidth: 180).frame(height: 36)
                 Spacer(minLength: 0)
-                Button { showsSource = false } label: { Image(systemName: "chevron.left") }
-                    .buttonStyle(.borderless)
-                    .help(L10n.text("editor.collapseSource"))
-                    .accessibilityLabel(L10n.text("editor.collapseSource"))
-            }.padding(.horizontal, 20).frame(height: 48)
+            }.padding(.horizontal, 28).frame(height: 72)
             editor(text: model.sourceText, editable: true, label: "editor.source", isSource: true,
                 onChange: model.editSource)
+                .overlay(alignment: .topLeading) {
+                    if model.sourceText.isEmpty {
+                        Text(L10n.text("editor.sourcePlaceholder"))
+                            .font(.system(size: 20)).foregroundStyle(.secondary)
+                            .padding(.horizontal, 29).padding(.top, 18)
+                            .allowsHitTesting(false).accessibilityHidden(true)
+                    }
+                }
         }
         .frame(minWidth: 260, idealWidth: 360, maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .underPageBackgroundColor))
@@ -89,14 +84,48 @@ struct TranslationEditorView: View {
 
     private var resultPane: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 8) {
                 Text(L10n.text(model.hasEdits ? "editor.edited" : "editor.translation"))
-                    .font(.caption).foregroundStyle(.secondary)
-                Spacer()
-            }.padding(.horizontal, 24).frame(height: 48)
+                    .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+                LanguagePicker(label: L10n.text("translation.to"), selection: model.preferences.targetLanguage,
+                    favoriteLanguages: model.preferences.favoriteLanguages, controlSize: .large, fontSize: 16) { model.preferences.targetLanguage = $0 }
+                    .frame(minWidth: 90, idealWidth: 150, maxWidth: 180).frame(height: 36)
+                Spacer(minLength: 0)
+                Button { copied = model.copyResult(to: .general) } label: {
+                    Label(L10n.text(copied ? "editor.copyDone" : "editor.copy"),
+                        systemImage: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 15)).frame(minWidth: 80, minHeight: 36)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.borderless).controlSize(.small)
+                .disabled(!model.canCopy)
+                .help(L10n.text(copied ? "translation.copied" : "translation.copy"))
+                .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
+            }.padding(.horizontal, 28).frame(height: 72)
             editor(text: model.resultText, editable: model.state == .completed,
                 label: "editor.translation", isSource: false, onChange: model.editTranslation)
+                .overlay {
+                    if model.resultText.isEmpty, model.state != .completed {
+                        VStack(spacing: 8) {
+                            Text(L10n.text("editor.resultPlaceholder"))
+                                .font(.system(size: 20, weight: .medium))
+                            Text(resultGuidance)
+                                .font(.system(size: 15)).foregroundStyle(.secondary)
+                        }
+                        .multilineTextAlignment(.center).padding(32)
+                        .allowsHitTesting(false)
+                    }
+                }
         }.frame(minWidth: 360, idealWidth: 640, maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var resultGuidance: String {
+        if model.state == .running { return L10n.text("translation.working") }
+        if model.state == .idle {
+            return L10n.text("editor.resultGuidance")
+        }
+        return PopupTranslationStatusView(model: model, openSettings: openSettings,
+            showDetails: { showsDetails = true }).notice ?? L10n.text("editor.resultGuidance")
     }
 
     private var footer: some View {
@@ -106,42 +135,56 @@ struct TranslationEditorView: View {
                 let status = PopupTranslationStatusView(model: model, openSettings: openSettings,
                     showDetails: { showsDetails = true })
                 if model.state == .running { ProgressView().controlSize(.small) }
-                Text(status.notice ?? L10n.text("translation.completed"))
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(3)
-                    .help(status.notice ?? L10n.text("translation.completed"))
+                let statusText = status.notice ?? L10n.text(model.state == .running ? "translation.working" : "translation.completed")
+                Text(statusText)
+                    .font(.system(size: 14)).foregroundStyle(.secondary).lineLimit(3)
+                    .help(statusText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if model.state == .needsConfiguration {
                     Button(L10n.text("menu.settings"), action: openSettings)
                 }
                 if model.input != nil || !model.sourceText.isEmpty {
-                    Button { showsDetails.toggle() } label: { Image(systemName: "info.circle") }
+                    Button { showsDetails.toggle() } label: {
+                        Image(systemName: "info.circle").font(.system(size: 16)).frame(width: 36, height: 36).contentShape(Rectangle())
+                    }
                         .help(L10n.text("popup.showDetails"))
                         .accessibilityLabel(L10n.text("popup.showDetails"))
                 }
-                Button { model.undoManager.undo() } label: { Image(systemName: "arrow.uturn.backward") }
+                Button { model.undoManager.undo() } label: {
+                    Image(systemName: "arrow.uturn.backward").font(.system(size: 16)).frame(width: 36, height: 36).contentShape(Rectangle())
+                }
                     .disabled(!model.canUndo)
                     .help(L10n.text("menu.undo"))
                     .accessibilityLabel(L10n.text("menu.undo"))
-                Button { model.undoManager.redo() } label: { Image(systemName: "arrow.uturn.forward") }
+                Button { model.undoManager.redo() } label: {
+                    Image(systemName: "arrow.uturn.forward").font(.system(size: 16)).frame(width: 36, height: 36).contentShape(Rectangle())
+                }
                     .disabled(!model.canRedo)
                     .help(L10n.text("menu.redo"))
                     .accessibilityLabel(L10n.text("menu.redo"))
                 Divider().frame(height: 20)
                 if model.state == .running {
-                    Button(L10n.text("translation.cancel")) { model.cancel() }
+                    Button { model.cancel() } label: {
+                        Text(L10n.text("translation.cancel"))
+                            .font(.system(size: 16, weight: .medium)).frame(minWidth: 96, minHeight: 32)
+                    }
+                    .buttonStyle(.bordered).controlSize(.large)
+                    .help(L10n.text("translation.stopHelp"))
                 } else {
-                    Button(L10n.text(model.input == nil ? "editor.translate" : "translation.retranslate")) {
-                        model.translateSource()
+                    Button { model.translateSource() } label: {
+                        Text(L10n.text(model.input == nil ? "editor.translate" : "translation.retranslate"))
+                            .font(.system(size: 16, weight: .medium)).frame(minWidth: 96, minHeight: 32)
                     }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
                     .disabled(!model.canTranslate)
                     .help(L10n.text("editor.hint"))
                 }
             }
-            .controlSize(.small)
+            .controlSize(.regular)
             .buttonStyle(.borderless)
         }
-        .padding(.horizontal, 20).padding(.vertical, 12)
+        .padding(.horizontal, 24).padding(.vertical, 14)
         .background(Color(nsColor: .windowBackgroundColor))
         .popover(isPresented: $showsDetails) { details }
     }
@@ -175,6 +218,7 @@ struct TranslationEditorView: View {
         TranslationTextEditor(text: text, editable: editable, label: L10n.text(label),
             documentID: model.documentID, undoManager: model.undoManager,
             backgroundColor: isSource ? .underPageBackgroundColor : .textBackgroundColor,
-            fontSize: isSource ? 16 : 17, onChange: onChange)
+            fontSize: isSource ? 20 : 22,
+            help: isSource ? L10n.text("editor.sourcePlaceholder") : L10n.text("editor.hint"), onChange: onChange)
     }
 }

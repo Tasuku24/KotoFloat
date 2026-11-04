@@ -43,7 +43,7 @@ struct TranslationEditorMenu: View {
             Divider()
             Button(L10n.text("menu.settings"), action: openSettings)
         } label: {
-            Image(systemName: "ellipsis").frame(width: 26, height: 28)
+            Image(systemName: "ellipsis").font(.system(size: 16)).frame(width: 36, height: 36)
         }
         .menuStyle(.borderlessButton).menuIndicator(.hidden).fixedSize()
         .help(L10n.text("popup.more"))

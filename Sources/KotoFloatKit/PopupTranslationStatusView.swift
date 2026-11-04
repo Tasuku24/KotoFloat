@@ -19,7 +19,7 @@ struct PopupTranslationStatusView: View {
     var notice: String? {
         if model.sourceText.utf8.count > 131_072 { return L10n.text("editor.sourceTooLarge") }
         switch model.state {
-        case .running: return changedInputNotice ?? L10n.text("translation.working")
+        case .running: return changedInputNotice
         case .needsConfiguration: return L10n.text("translation.configure")
         case .cancelled: return changedInputNotice ?? L10n.text("translation.cancelled")
         case .failed(let error):
@@ -38,7 +38,6 @@ struct PopupTranslationStatusView: View {
         if let notice {
             HStack(spacing: 10) {
                 if model.state == .running {
-                    ProgressView().controlSize(.small)
                     Text(notice).font(.caption).foregroundStyle(.secondary).lineLimit(2).help(notice)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 } else {

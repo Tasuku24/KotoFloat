@@ -134,14 +134,22 @@ struct TranslationPopupToolbar: View {
         PopupToolbar {
             if let translation {
                 LanguagePicker(label: L10n.text("translation.to"), selection: translation.preferences.targetLanguage,
-                    favoriteLanguages: translation.preferences.favoriteLanguages) { translation.preferences.targetLanguage = $0 }
+                    favoriteLanguages: translation.preferences.favoriteLanguages) { translation.changePopupLanguages(target: $0, captureState: capture.state) }
                     .frame(minWidth: 70, idealWidth: 110, maxWidth: 160)
                     .frame(height: 26)
+                ZStack {
+                    if translation.state == .running {
+                        ProgressView().controlSize(.small)
+                            .help(L10n.text("translation.working"))
+                            .accessibilityLabel(L10n.text("translation.working"))
+                    }
+                }
+                .frame(width: 16, height: 28)
                 if translation.state == .running {
                     Button { translation.cancel() } label: {
                         Image(systemName: "stop.circle").frame(width: 26, height: 28)
                     }
-                    .help(L10n.text("translation.cancel"))
+                    .help(L10n.text("translation.stopHelp"))
                     .accessibilityLabel(L10n.text("translation.cancel"))
                 } else {
                     Button { copied = translation.copyResult(to: .general) } label: {
@@ -163,7 +171,8 @@ struct TranslationPopupToolbar: View {
         }
         .background {
             if let translation {
-                FavoriteShortcutView(preferences: translation.preferences).frame(width: 0, height: 0)
+                FavoriteShortcutView(preferences: translation.preferences,
+                    onSelect: { translation.changePopupLanguages(target: $0, captureState: capture.state) }).frame(width: 0, height: 0)
             }
         }
         .onChange(of: translation?.state) { copied = false }
@@ -194,7 +203,7 @@ private struct PopupMoreMenu: View {
                 Menu(L10n.text("translation.from")) {
                     Picker(L10n.text("translation.from"), selection: Binding(
                         get: { translation.preferences.sourceLanguage },
-                        set: { translation.preferences.sourceLanguage = $0 })) {
+                        set: { translation.changePopupLanguages(source: $0, captureState: capture.state) })) {
                         ForEach(TranslationLanguage.allCases, id: \.self) { Text($0.title).tag($0) }
                     }
                 }

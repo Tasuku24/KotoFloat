@@ -8,6 +8,8 @@ struct LanguagePicker: NSViewRepresentable {
     var excluded: Set<TranslationLanguage> = []
     var buttonTitle: String?
     var favoriteLanguages: [TranslationLanguage] = []
+    var controlSize: NSControl.ControlSize = .regular
+    var fontSize: CGFloat = NSFont.systemFontSize
     let onSelect: (TranslationLanguage) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -24,6 +26,8 @@ struct LanguagePicker: NSViewRepresentable {
     func updateNSView(_ button: NSButton, context: Context) {
         context.coordinator.picker = self
         button.title = buttonTitle ?? selection.title
+        button.controlSize = controlSize
+        button.font = .systemFont(ofSize: fontSize)
         button.setAccessibilityLabel(label)
         button.setAccessibilityValue(selection.title)
         button.toolTip = label + ": " + selection.title
@@ -102,17 +106,21 @@ struct LanguagePicker: NSViewRepresentable {
         let hint = NSTextField(wrappingLabelWithString: L10n.text("language.modelHint"))
         hint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         hint.textColor = .secondaryLabelColor
+        hint.preferredMaxLayoutWidth = 336
         let stack = NSStackView(views: [searchField, scroll, emptyLabel, hint])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
+        // Let content shrink past the controller's previous preferred height after filtering.
+        // 絞り込み後は、直前の推奨高さよりも内容に合わせた縮小を優先する。
+        stack.setHuggingPriority(.required, for: .vertical)
         stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         for child in [searchField, scroll, emptyLabel, hint] {
             child.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24).isActive = true
         }
         scroll.heightAnchor.constraint(equalToConstant: 280).isActive = true
+        stack.widthAnchor.constraint(equalToConstant: 360).isActive = true
         view = stack
-        preferredContentSize = CGSize(width: 360, height: 400)
         refreshResults()
     }
 
@@ -143,6 +151,8 @@ struct LanguagePicker: NSViewRepresentable {
             table.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
             table.scrollRowToVisible(index)
         } else { table.deselectAll(nil) }
+        view.layoutSubtreeIfNeeded()
+        preferredContentSize = view.fittingSize
     }
 
     func moveSelection(by offset: Int) {

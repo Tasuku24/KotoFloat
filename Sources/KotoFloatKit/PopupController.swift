@@ -11,6 +11,8 @@ final class PopupController: NSObject, NSWindowDelegate {
     private let captureEnvironment: any CaptureEnvironment
     private var measuredContentHeight: CGFloat?
     private var contentResizeScheduled = false
+    private var liveResizeStartHeight: CGFloat?
+    private var automaticallyFitsHeight = true
     var openSettings: (() -> Void)?
     var openGlossaries: (() -> Void)?
     var openEditor: (() -> Void)?
@@ -49,6 +51,8 @@ final class PopupController: NSObject, NSWindowDelegate {
     }
 
     private func showPopup(selectionBounds: CGRect? = nil) {
+        automaticallyFitsHeight = true
+        liveResizeStartHeight = nil
         let screens = NSScreen.screens.map(\.visibleFrame)
         let pointer = NSEvent.mouseLocation
         let frame = PopupGeometry.openingFrame(preferences.savedFrame, placement: preferences.placement,
@@ -119,7 +123,20 @@ final class PopupController: NSObject, NSWindowDelegate {
 
     func windowDidMove(_ notification: Notification) { saveFrameIfVisible() }
     func windowDidResize(_ notification: Notification) { saveFrameIfVisible() }
-    func windowDidEndLiveResize(_ notification: Notification) { fitContentHeight() }
+    func windowWillStartLiveResize(_ notification: Notification) {
+        liveResizeStartHeight = panel.frame.height
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        if let liveResizeStartHeight, abs(panel.frame.height - liveResizeStartHeight) >= 1 {
+            // A manually chosen height takes precedence until the next popup invocation.
+            // 手動で指定した高さは、次にポップアップを呼び出すまで優先する。
+            automaticallyFitsHeight = false
+        }
+        liveResizeStartHeight = nil
+        fitContentHeight()
+        saveFrameIfVisible()
+    }
     func windowDidChangeScreen(_ notification: Notification) { recoverVisibleFrame() }
     func windowWillClose(_ notification: Notification) {
         preferences.savedFrame = panel.frame
@@ -153,7 +170,8 @@ final class PopupController: NSObject, NSWindowDelegate {
     }
 
     private func fitContentHeight() {
-        guard panel.isVisible, !panel.inLiveResize, let measuredContentHeight else { return }
+        guard automaticallyFitsHeight, liveResizeStartHeight == nil,
+              panel.isVisible, !panel.inLiveResize, let measuredContentHeight else { return }
         let chromeHeight = max(0, panel.frame.height - (panel.contentView?.bounds.height ?? panel.frame.height))
         let frame = PopupGeometry.fittingContentHeight(measuredContentHeight + chromeHeight,
             to: panel.frame, screens: NSScreen.screens.map(\.visibleFrame), pointer: NSEvent.mouseLocation)

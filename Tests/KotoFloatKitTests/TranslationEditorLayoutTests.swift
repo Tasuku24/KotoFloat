@@ -27,6 +27,8 @@ extension PopupControllerTests {
             #expect(split.arrangedSubviews.count == 2)
             #expect(abs(split.arrangedSubviews[0].frame.width - 1040 * 0.36) < 2)
             #expect(split.arrangedSubviews[1].frame.width > split.arrangedSubviews[0].frame.width)
+            try checkEditorLanguageHeaders(host)
+            try saveEditorPreview(host, name: "02-empty")
             split.setPosition(450, ofDividerAt: 0)
             let longText = String(repeating: "Long source text. 長い原文をスクロールして確認します。\n", count: 200)
             model.editSource(longText)
@@ -56,8 +58,41 @@ extension PopupControllerTests {
             #expect(window.frame.size.width == 840)
             #expect(await service.count == 1)
             #expect(model.state == .completed)
+            try checkEditorLanguageHeaders(host)
+            try saveEditorPreview(host, name: "03-long-minimum")
+            window.appearance = NSAppearance(named: .darkAqua)
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(100))
+            try saveEditorPreview(host, name: "04-long-dark")
+            split.setPosition(480, ofDividerAt: 0)
+            host.layoutSubtreeIfNeeded()
+            try await Task.sleep(for: .milliseconds(100))
+            try checkEditorLanguageHeaders(host)
+            try saveEditorPreview(host, name: "05-narrow-result")
             model.cancel()
         }
+    }
+
+    private func checkEditorLanguageHeaders(_ host: NSView) throws {
+        let buttons = editorDescendants(host).compactMap { $0 as? NSButton }
+        let source = try #require(buttons.first { $0.accessibilityLabel() == L10n.text("translation.from") })
+        let target = try #require(buttons.first { $0.accessibilityLabel() == L10n.text("translation.to") })
+        let sourceFrame = source.convert(source.bounds, to: host)
+        let targetFrame = target.convert(target.bounds, to: host)
+        #expect(abs(sourceFrame.midY - targetFrame.midY) < 1)
+        #expect(host.bounds.contains(sourceFrame))
+        #expect(host.bounds.contains(targetFrame))
+        #expect(sourceFrame.maxX < targetFrame.minX)
+    }
+
+    // Opt-in hosted-content captures do not show or focus the test window.
+    // 任意の本文描画の保存では、検証ウィンドウの表示やフォーカスを行わない。
+    private func saveEditorPreview(_ host: NSView, name: String) throws {
+        guard let directory = ProcessInfo.processInfo.environment["KOTOFLOAT_EDITOR_PREVIEW_DIR"] else { return }
+        let bitmap = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+        host.cacheDisplay(in: host.bounds, to: bitmap)
+        let data = try #require(bitmap.representation(using: .png, properties: [:]))
+        try data.write(to: URL(fileURLWithPath: directory).appendingPathComponent(name + ".png"))
     }
 
     private func editorDescendants(_ view: NSView) -> [NSView] {
