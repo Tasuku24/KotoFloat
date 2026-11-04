@@ -38,6 +38,7 @@
 "capture.unknownSource" = "Source application";
 "capture.manual" = "Enter or paste text…";
 "capture.manualSource" = "Manually entered text";
+"capture.clipboardSource" = "Clipboard";
 "capture.idle" = "Select text in another app and use your capture shortcut.";
 "capture.working" = "Getting selected text…";
 "capture.ready" = "Text is ready";
@@ -49,7 +50,7 @@
 "capture.useManual" = "Use this text";
 "capture.error.permissionRequired" = "Allow Accessibility access to read selected text. You can also enter or paste text without this permission.";
 "capture.error.noSource" = "Select text in another application and try the shortcut there.";
-"capture.error.noSelection" = "No text is selected. Select some text and try again, or paste it manually.";
+"capture.error.noSelection" = "No text is selected and the clipboard has no text. Select or copy some text and try again, or enter it manually.";
 "capture.error.protectedField" = "Text in password or protected fields is not captured.";
 "capture.error.sourceChanged" = "Focus changed during capture, so the result was discarded. Stay in the source app and try again. The clipboard was left untouched after the change.";
 "capture.error.copyFailed" = "The app did not provide usable text through Copy. Copy the desired text yourself and paste it here.";

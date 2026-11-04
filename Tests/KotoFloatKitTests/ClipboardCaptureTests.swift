@@ -42,6 +42,27 @@ struct ClipboardCaptureTests {
         #expect(session.finished)
     }
 
+    @Test func clipboardFallbackReadsTextWithoutChangingContentsOrGeneration() throws {
+        let board = board()
+        defer { board.releaseGlobally() }
+        write("  Existing\nclipboard  ", to: board)
+        let clipboard = SystemClipboard(board)
+        let original = try clipboard.snapshot()
+        #expect(try clipboard.readStableText() == "  Existing\nclipboard  ")
+        #expect(clipboard.generation == original.generation)
+        #expect(try clipboard.snapshot().items == original.items)
+        board.clearContents()
+        board.setData(Data([1]), forType: .png)
+        let generation = clipboard.generation
+        #expect(try clipboard.readStableText() == nil)
+        #expect(clipboard.generation == generation)
+    }
+
+    @Test func clipboardFallbackRejectsAConcurrentClipboardWrite() {
+        let clipboard = ChangingClipboard()
+        #expect(throws: CaptureFailure.clipboardChanged) { try clipboard.readStableText() }
+    }
+
     @Test func unchangedClipboardIsNeverUsedAsSelection() async {
         let board = board()
         defer { board.releaseGlobally() }
@@ -169,4 +190,14 @@ struct ClipboardCaptureTests {
         #expect(board.string(forType: .string) == "new copy")
         #expect(session.finished)
     }
+}
+
+@MainActor private final class ChangingClipboard: ClipboardAccess {
+    var generation = 0
+    func snapshot() throws -> ClipboardSnapshot { ClipboardSnapshot(generation: generation, items: []) }
+    func text() -> String? {
+        generation += 1
+        return "Text from an obsolete generation"
+    }
+    func restore(_ snapshot: ClipboardSnapshot, ifUnchangedSince generation: Int) {}
 }

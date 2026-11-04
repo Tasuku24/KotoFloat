@@ -29,6 +29,41 @@ struct TranslationClientTests {
         #expect(throws: TranslationFailure.invalidToken) { try invalid.request(for: source) }
     }
 
+    @Test func requestPreservesParagraphsAndExplicitlyRequiresLineStructure() throws {
+        let text = "Heading\r\n\r\n  • First item\r\n  • Second item\r\n\r\nFinal paragraph.\n"
+        let input = TranslationInput(text: text, source: .english, target: .japanese)
+        let client = OpenAITranslationClient(server: try ServerConfiguration(endpoint: "https://example.test", model: "test-model"), token: nil)
+        let body = try #require(client.request(for: input).httpBody)
+        let object = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+        let messages = try #require(object["messages"] as? [[String: String]])
+        #expect(messages.last?["content"] == text)
+        #expect(messages.first?["content"]?.contains("Preserve every explicit line break and blank line") == true)
+    }
+
+    @Test func streamingPreservesNewlineOnlyChunksBlankLinesAndIndentation() throws {
+        let pieces = ["見出し", "\n", "\n", "  • 項目1", "\r", "\n", "  • 項目2", "\n\n", "最後の段落。", "\n"]
+        var decoder = SSEDecoder()
+        var output = ""
+        var completed = false
+        var wire = ""
+        for piece in pieces {
+            let json = try JSONSerialization.data(withJSONObject: ["choices": [["index": 0, "delta": ["content": piece]]]])
+            wire += "data: " + String(decoding: json, as: UTF8.self) + "\r\n\r\n"
+        }
+        wire += "data: {\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n"
+        for byte in wire.utf8 {
+            for event in try decoder.feed(byte) {
+                switch event {
+                case .text(let part): output += part
+                case .completed: completed = true
+                }
+            }
+        }
+        try decoder.finish()
+        #expect(completed)
+        #expect(output == pieces.joined())
+    }
+
     @Test func parsesModelsAndMapsFailuresWithoutExposingServerBody() throws {
         #expect(try OpenAITranslationClient.decodeModels(Data(#"{"object":"list","data":[{"id":"model-b"},{"id":"model-a"},{"id":"model-a"}]}"#.utf8)) == ["model-a", "model-b"])
         #expect(throws: TranslationFailure.malformedResponse) { try OpenAITranslationClient.decodeModels(Data(#"{"data":[{}]}"#.utf8)) }

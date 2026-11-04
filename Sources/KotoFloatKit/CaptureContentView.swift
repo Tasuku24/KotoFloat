@@ -133,7 +133,7 @@ struct CaptureContentView: View {
 
     private func sourceText(_ text: CapturedText) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(text.source?.name ?? L10n.text("capture.manualSource"))
+            Text(text.source?.name ?? L10n.text(text.method == .clipboard ? "capture.clipboardSource" : "capture.manualSource"))
                 .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             Text(text.text).font(.system(size: 16)).lineSpacing(5)
                 .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)

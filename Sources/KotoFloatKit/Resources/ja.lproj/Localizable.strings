@@ -38,6 +38,7 @@
 "capture.unknownSource" = "取得元アプリ";
 "capture.manual" = "文章を入力・貼り付け…";
 "capture.manualSource" = "入力した文章";
+"capture.clipboardSource" = "クリップボード";
 "capture.idle" = "別アプリで文章を選択し、取得ショートカットを押してください。";
 "capture.working" = "選択文章を取得中…";
 "capture.ready" = "文章を取得しました";
@@ -49,7 +50,7 @@
 "capture.useManual" = "この文章を使用";
 "capture.error.permissionRequired" = "選択文章の取得にはアクセシビリティ権限が必要です。権限なしでも手入力・貼り付けを使えます。";
 "capture.error.noSource" = "別のアプリで文章を選択し、そのアプリでショートカットを押してください。";
-"capture.error.noSelection" = "文章が選択されていません。選択して再試行するか、手動で貼り付けてください。";
+"capture.error.noSelection" = "選択された文章も、クリップボードの文章もありません。文章を選択・コピーして再試行するか、手動で入力してください。";
 "capture.error.protectedField" = "パスワードなどの保護された入力欄は取得しません。";
 "capture.error.sourceChanged" = "取得中にフォーカスが変わったため、結果を破棄しました。元アプリのままで再試行してください。変更後のクリップボードは復元していません。";
 "capture.error.copyFailed" = "コピー操作で文章を取得できませんでした。必要な文章を自分でコピーし、ここへ貼り付けてください。";
