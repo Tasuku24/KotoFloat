@@ -1,6 +1,9 @@
 "menu.showSample" = "Show sample popup";
 "menu.settings" = "Settings…";
 "menu.quit" = "Quit KotoFloat";
+"menu.background" = "Continue in Background";
+"menu.file" = "File";
+"menu.close" = "Close Window";
 "menu.edit" = "Edit";
 "menu.copy" = "Copy";
 "menu.selectAll" = "Select All";

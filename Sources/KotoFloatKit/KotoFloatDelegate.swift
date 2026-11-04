@@ -11,6 +11,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     private var glossaryStore: GlossaryStore?
     private var glossaryWindow: NSWindow?
     private var editorWindow: NSWindow?
+    private var editorContentView: NSHostingView<TranslationEditorView>?
 
     public override init() { super.init() }
 
@@ -28,16 +29,13 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         controller.isEditorVisible = { [weak self] in self?.editorWindow?.isVisible == true }
         popupController = controller
         configureMenuBar()
-        configureAppMenu()
+        NSApp.mainMenu = makeAppMenu()
         NotificationCenter.default.addObserver(self, selector: #selector(languageChanged),
             name: AppLocalization.didChange, object: AppLocalization.shared)
         KeyboardShortcuts.onKeyUp(for: .showSamplePopup) { [weak controller] in
             controller?.captureSelectedText()
         }
-        if !UserDefaults.standard.bool(forKey: "hasShownWelcome") {
-            UserDefaults.standard.set(true, forKey: "hasShownWelcome")
-            showSettings()
-        }
+        showEditor()
     }
 
     public func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
@@ -57,27 +55,61 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
     }
 
+    @objc func moveToBackground() {
+        // Hide application UI while retaining drafts and active translations.
+        // A pending capture must not reopen the popup after the user hides it.
+        // アプリの画面を非表示にし、下書きと実行中の翻訳を保持する。
+        // 取得処理が後からポップアップを再表示しないよう、進行中の取得だけを取り消す。
+        popupController?.capture.cancel()
+        releaseEditorWindow()
+        for window in NSApp.windows where window !== statusItem?.button?.window {
+            window.orderOut(nil)
+        }
+    }
+
     @objc private func showEditor() {
         guard let model = popupController?.translation else { return }
-        if editorWindow == nil {
-            let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1040, height: 620),
-                                  styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
-                                  backing: .buffered, defer: false)
-            window.title = L10n.text("editor.title")
-            window.titleVisibility = .hidden
-            window.titlebarAppearsTransparent = true
-            window.isReleasedWhenClosed = false
-            window.contentMinSize = CGSize(width: 840, height: 400)
-            window.delegate = self
-            window.contentView = TranslationEditorView(model: model,
-                openSettings: { [weak self] in self?.showSettings() },
-                openGlossaries: { [weak self] in self?.showGlossaries() }).makeHostingView()
+        let window = prepareEditorWindow(model: model)
+        if window.frameAutosaveName.isEmpty {
             window.setFrameAutosaveName("TranslationEditor")
             if !window.setFrameUsingName("TranslationEditor") { window.center() }
-            editorWindow = window
         }
+        // Order the new native window on the current Space before requesting app activation.
+        // 新しい標準ウィンドウを現在のスペースに表示してから、アプリのアクティブ化を要求する。
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        editorWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func prepareEditorWindow(model: TranslationModel) -> NSWindow {
+        if let editorWindow, editorWindow.isVisible, !editorWindow.isMiniaturized { return editorWindow }
+        releaseEditorWindow()
+        if editorContentView == nil {
+            editorContentView = TranslationEditorView(model: model,
+                openSettings: { [weak self] in self?.showSettings() },
+                openGlossaries: { [weak self] in self?.showGlossaries() }).makeHostingView()
+        }
+        let window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 1040, height: 620),
+                              styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
+                              backing: .buffered, defer: false)
+        window.title = L10n.text("editor.title")
+        window.titleVisibility = .hidden
+        window.titlebarAppearsTransparent = true
+        window.isReleasedWhenClosed = false
+        window.contentMinSize = CGSize(width: 840, height: 400)
+        window.delegate = self
+        window.contentView = editorContentView
+        editorWindow = window
+        return window
+    }
+
+    private func releaseEditorWindow() {
+        // Retain the hosted editor and shared model while discarding the old native Space association.
+        // Do not trigger the user-close cancellation path when moving to the background.
+        // 編集ビューと共有モデルを保持し、古い標準ウィンドウのスペースへの所属だけを破棄する。
+        // バックグラウンドへの移行時には、利用者が閉じた場合の翻訳取消処理を呼ばない。
+        editorWindow?.delegate = nil
+        editorWindow?.close()
+        editorWindow = nil
     }
 
     public func windowWillReturnUndoManager(_ window: NSWindow) -> UndoManager? {
@@ -85,8 +117,9 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     }
 
     public func windowWillClose(_ notification: Notification) {
-        if notification.object as? NSWindow === editorWindow, popupController?.panel.isVisible != true {
-            popupController?.translation?.cancel()
+        if notification.object as? NSWindow === editorWindow {
+            if popupController?.panel.isVisible != true { popupController?.translation?.cancel() }
+            editorWindow = nil
         }
     }
 
@@ -134,6 +167,11 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         image?.accessibilityDescription = "KotoFloat"
         item.button?.image = image ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "KotoFloat")
         item.button?.toolTip = "KotoFloat"
+        item.menu = makeStatusMenu()
+        statusItem = item
+    }
+
+    func makeStatusMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(actionItem("menu.editor", action: #selector(showEditor)))
         menu.addItem(actionItem("capture.manual", action: #selector(showManualEntry)))
@@ -141,12 +179,11 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         menu.addItem(actionItem("menu.showSample", action: #selector(showSample)))
         menu.addItem(actionItem("menu.settings", action: #selector(showSettings), key: ","))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: L10n.text("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
-        item.menu = menu
-        statusItem = item
+        addLifecycleActions(to: menu)
+        return menu
     }
 
-    private func configureAppMenu() {
+    func makeAppMenu() -> NSMenu {
         let mainMenu = NSMenu()
         let appItem = NSMenuItem()
         let appMenu = NSMenu(title: "KotoFloat")
@@ -154,9 +191,15 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         appMenu.addItem(actionItem("menu.glossaries", action: #selector(showGlossaries)))
         appMenu.addItem(actionItem("menu.settings", action: #selector(showSettings), key: ","))
         appMenu.addItem(.separator())
-        appMenu.addItem(NSMenuItem(title: L10n.text("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
+        addLifecycleActions(to: appMenu)
         appItem.submenu = appMenu
         mainMenu.addItem(appItem)
+
+        let fileItem = NSMenuItem()
+        let fileMenu = NSMenu(title: L10n.text("menu.file"))
+        fileMenu.addItem(NSMenuItem(title: L10n.text("menu.close"), action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w"))
+        fileItem.submenu = fileMenu
+        mainMenu.addItem(fileItem)
 
         let editItem = NSMenuItem()
         let editMenu = NSMenu(title: L10n.text("menu.edit"))
@@ -170,7 +213,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
         editItem.submenu = editMenu
         mainMenu.addItem(editItem)
-        NSApp.mainMenu = mainMenu
+        return mainMenu
     }
 
     @objc private func languageChanged() {
@@ -178,12 +221,19 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         glossaryWindow?.title = L10n.text("glossary.title")
         editorWindow?.title = L10n.text("editor.title")
         configureMenuBar()
-        configureAppMenu()
+        NSApp.mainMenu = makeAppMenu()
     }
 
     private func actionItem(_ key: String, action: Selector, key equivalent: String = "") -> NSMenuItem {
         let item = NSMenuItem(title: L10n.text(key), action: action, keyEquivalent: equivalent)
         item.target = self
         return item
+    }
+
+    private func addLifecycleActions(to menu: NSMenu) {
+        menu.addItem(actionItem("menu.background", action: #selector(moveToBackground), key: "q"))
+        let quit = NSMenuItem(title: L10n.text("menu.quit"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        quit.keyEquivalentModifierMask = [.command, .option]
+        menu.addItem(quit)
     }
 }

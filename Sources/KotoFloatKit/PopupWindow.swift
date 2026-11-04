@@ -4,6 +4,14 @@ final class PopupWindow: NSWindow {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
 
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isKeyWindow, PopupWindowFactory.isCloseShortcut(event) {
+            performClose(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func cancelOperation(_ sender: Any?) {
         guard isKeyWindow else { return }
         performClose(sender)
@@ -22,6 +30,14 @@ final class PopupPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if isKeyWindow, PopupWindowFactory.isCloseShortcut(event) {
+            performClose(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
     override func cancelOperation(_ sender: Any?) {
         guard isKeyWindow else { return }
         performClose(sender)
@@ -38,6 +54,11 @@ final class PopupPanel: NSPanel {
 
 @MainActor
 enum PopupWindowFactory {
+    static func isCloseShortcut(_ event: NSEvent) -> Bool {
+        event.type == .keyDown && event.charactersIgnoringModifiers?.lowercased() == "w" &&
+            event.modifierFlags.intersection([.command, .control, .option, .shift]) == .command
+    }
+
     static func make(mode: PopupFocusMode) -> NSWindow {
         let frame = CGRect(origin: .zero, size: PopupGeometry.defaultSize)
         let style: NSWindow.StyleMask = [.titled, .closable, .resizable, .fullSizeContentView]
@@ -66,9 +87,10 @@ enum PopupWindowFactory {
     }
 
     static func isDismissal(_ event: NSEvent, in window: NSWindow) -> Bool {
-        // Handle Escape only inside the key popup, never in a global event monitor.
-        // Escはキー状態のポップアップ内でのみ扱い、グローバル監視はしない。
-        event.type == .keyDown && event.keyCode == 53 && window.isKeyWindow &&
-            event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty
+        // Handle Escape and Command-W only inside the key popup, never in a global event monitor.
+        // EscとCommand-Wはキー状態のポップアップ内でのみ扱い、グローバル監視はしない。
+        event.type == .keyDown && window.isKeyWindow &&
+            ((event.keyCode == 53 && event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty)
+                || isCloseShortcut(event))
     }
 }

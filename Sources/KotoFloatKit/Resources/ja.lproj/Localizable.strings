@@ -1,6 +1,9 @@
 "menu.showSample" = "サンプルを表示";
 "menu.settings" = "設定…";
 "menu.quit" = "KotoFloatを終了";
+"menu.background" = "バックグラウンドで実行";
+"menu.file" = "ファイル";
+"menu.close" = "ウィンドウを閉じる";
 "menu.edit" = "編集";
 "menu.copy" = "コピー";
 "menu.selectAll" = "すべてを選択";
