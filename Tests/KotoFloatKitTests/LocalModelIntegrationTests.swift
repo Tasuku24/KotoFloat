@@ -130,6 +130,25 @@ struct LocalModelIntegrationTests {
         #expect(!(await received.text).isEmpty)
     }
 
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_LINE_BREAK_REPORT"] != nil))
+    @MainActor func actualTranslationPreservesParagraphsAndListLines() async throws {
+        let (server, token) = try configuration()
+        let client = OpenAITranslationClient(server: server, token: token)
+        let text = "作業の手順\n\n• 電源を切ってください。\n• ケーブルを取り外してください。\n\n作業が終わったら、電源を入れてください。"
+        let output = TextCollector()
+        try await client.translate(TranslationInput(text: text, source: .japanese, target: .english)) {
+            await output.append($0)
+        }
+        let translated = await output.text
+        let path = try #require(ProcessInfo.processInfo.environment["KOTOFLOAT_LINE_BREAK_REPORT"])
+        try translated.write(toFile: path, atomically: true, encoding: .utf8)
+        let normalized = translated.replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n").trimmingCharacters(in: .newlines)
+        let lines = normalized.components(separatedBy: "\n")
+        #expect(lines.map(\.isEmpty) == [false, true, false, false, true, false])
+        #expect(lines.filter { $0.hasPrefix("• ") }.count == 2)
+    }
+
     // Capture real outputs for human review; a successful request does not prove translation quality.
     // 実際の出力を目視評価用に保存する。通信の成功は翻訳品質の成功を意味しない。
     @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_EVALUATION_REPORT"] != nil))

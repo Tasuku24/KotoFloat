@@ -21,28 +21,6 @@ struct TranslationDirectionView: View {
     }
 }
 
-struct TranslationContentView: View {
-    let model: TranslationModel
-    let openSettings: () -> Void
-    var openGlossaries: () -> Void = {}
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            TranslationDirectionView(preferences: model.preferences).controlSize(.small)
-            FavoriteLanguageBar(preferences: model.preferences)
-            TranslationGlossaryView(model: model, openGlossaries: openGlossaries)
-            TranslationStatusView(model: model, openSettings: openSettings)
-            if model.hasEdits {
-                Label(L10n.text("editor.edited"), systemImage: "pencil").font(.caption).foregroundStyle(.secondary)
-            }
-            if !model.resultText.isEmpty {
-                Text(model.resultText).font(.system(size: 17)).lineSpacing(6)
-                    .textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("translationOutput")
-            }
-        }
-    }
-}
-
 struct TranslationGlossaryView: View {
     let model: TranslationModel
     var openGlossaries: () -> Void = {}
@@ -55,6 +33,15 @@ struct TranslationGlossaryView: View {
                     Text(L10n.text("glossary.changed")).font(.caption).foregroundStyle(.secondary)
                 }
             }
+            TranslationGlossaryDetailsView(model: model)
+        }
+    }
+}
+
+struct TranslationGlossaryDetailsView: View {
+    let model: TranslationModel
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
             if let context = model.input?.glossary, let name = context.name {
                 Text(String(format: L10n.text("glossary.used"), name, context.entries.count))
                     .font(.caption).foregroundStyle(.secondary)

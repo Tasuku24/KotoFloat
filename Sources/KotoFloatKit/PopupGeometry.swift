@@ -2,25 +2,64 @@ import Foundation
 import CoreGraphics
 
 enum PopupGeometry {
-    static let defaultSize = CGSize(width: 480, height: 400)
-    static let minimumSize = CGSize(width: 360, height: 240)
+    static let defaultSize = CGSize(width: 480, height: 200)
+    static let minimumSize = CGSize(width: 360, height: 160)
+    static let maximumHeight: CGFloat = 600
+
+    static func openingFrame(_ saved: CGRect?, placement: PopupPlacement, selectionBounds: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        let saved = saved.flatMap { isUsable($0) ? $0 : nil }
+        let size = CGSize(width: saved?.width ?? defaultSize.width, height: defaultSize.height)
+        switch placement {
+        case .previousPosition:
+            let compact = saved.map { CGRect(x: $0.minX, y: $0.maxY - size.height, width: size.width, height: size.height) }
+            return restore(compact, screens: screens, pointer: pointer)
+        case .nearPointer:
+            return nearPointer(size: size, screens: screens, pointer: pointer)
+        case .nearSelection:
+            return nearSelection(selectionBounds, size: size, screens: screens, pointer: pointer)
+        }
+    }
+
+    static func fittingContentHeight(_ height: CGFloat, to frame: CGRect, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        guard height.isFinite, height >= 0, isUsable(frame) else { return restore(frame, screens: screens, pointer: pointer) }
+        let screen = screen(for: frame, screens: screens, pointer: pointer)
+        let limit = screen.map { maximumHeight(on: $0) } ?? maximumHeight
+        let fittedHeight = min(max(ceil(height), minimumSize.height), limit)
+        let fitted = CGRect(x: frame.minX, y: frame.maxY - fittedHeight, width: frame.width, height: fittedHeight)
+        return screen.map { clamp(fitted, to: $0) } ?? fitted
+    }
+
+    static func toolbarLeadingInset(for buttons: [CGRect]) -> CGFloat {
+        max(88, (buttons.filter(isUsable).map(\.maxX).max() ?? 0) + 12)
+    }
+
+    static func maximumHeight(on screen: CGRect) -> CGFloat {
+        min(maximumHeight, max(minimumSize.height, screen.height * 7 / 10), screen.height)
+    }
+
+    static func screen(for frame: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect? {
+        let screens = screens.filter(isUsable)
+        if let frame, let overlapping = screens.max(by: { intersectionArea(frame, $0) < intersectionArea(frame, $1) }),
+           intersectionArea(frame, overlapping) > 0 { return overlapping }
+        return screen(at: pointer, in: screens)
+    }
 
     static func restore(_ saved: CGRect?, screens: [CGRect], pointer: CGPoint) -> CGRect {
         guard let saved, isUsable(saved) else {
             return nearPointer(size: defaultSize, screens: screens, pointer: pointer)
         }
-        let screens = screens.filter(isUsable)
-        let overlapping = screens.max { intersectionArea(saved, $0) < intersectionArea(saved, $1) }
-        let screen = overlapping.flatMap { intersectionArea(saved, $0) > 0 ? $0 : nil }
-            ?? screen(at: pointer, in: screens)
+        let screen = screen(for: saved, screens: screens, pointer: pointer)
         guard let screen else { return saved }
         return clamp(saved, to: screen)
     }
 
     static func nearPointer(size: CGSize, screens: [CGRect], pointer: CGPoint) -> CGRect {
+        guard let screen = screen(at: pointer, in: screens.filter(isUsable)) else {
+            return CGRect(x: pointer.x + 16, y: pointer.y - size.height - 16, width: size.width, height: size.height)
+        }
+        let size = boundedSize(size, to: screen)
         let frame = CGRect(x: pointer.x + 16, y: pointer.y - size.height - 16,
                            width: size.width, height: size.height)
-        guard let screen = screen(at: pointer, in: screens.filter(isUsable)) else { return frame }
         return clamp(frame, to: screen)
     }
 
@@ -35,6 +74,7 @@ enum PopupGeometry {
               intersectionArea(selection, screen) > 0 else {
             return nearPointer(size: size, screens: screens, pointer: pointer)
         }
+        let size = boundedSize(size, to: screen)
         let candidates = [
             CGRect(x: selection.maxX + 16, y: selection.maxY - size.height, width: size.width, height: size.height),
             CGRect(x: selection.minX - size.width - 16, y: selection.maxY - size.height, width: size.width, height: size.height),
@@ -55,10 +95,14 @@ enum PopupGeometry {
     }
 
     private static func clamp(_ frame: CGRect, to screen: CGRect) -> CGRect {
-        let width = min(max(frame.width, minimumSize.width), screen.width)
-        let height = min(max(frame.height, minimumSize.height), screen.height)
-        return CGRect(x: min(max(frame.minX, screen.minX), screen.maxX - width),
-                      y: min(max(frame.minY, screen.minY), screen.maxY - height),
-                      width: width, height: height)
+        let size = boundedSize(frame.size, to: screen)
+        return CGRect(x: min(max(frame.minX, screen.minX), screen.maxX - size.width),
+                      y: min(max(frame.minY, screen.minY), screen.maxY - size.height),
+                      width: size.width, height: size.height)
+    }
+
+    private static func boundedSize(_ size: CGSize, to screen: CGRect) -> CGSize {
+        CGSize(width: min(max(size.width, minimumSize.width), screen.width),
+               height: min(max(size.height, minimumSize.height), maximumHeight(on: screen)))
     }
 }

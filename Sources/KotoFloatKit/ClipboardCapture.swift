@@ -13,6 +13,15 @@ protocol ClipboardAccess: AnyObject {
     func restore(_ snapshot: ClipboardSnapshot, ifUnchangedSince generation: Int)
 }
 
+extension ClipboardAccess {
+    func readStableText() throws -> String? {
+        let before = generation
+        let value = text()
+        guard generation == before else { throw CaptureFailure.clipboardChanged }
+        return value
+    }
+}
+
 @MainActor
 protocol CopySession: AnyObject {
     var sourceIsCurrent: Bool { get }

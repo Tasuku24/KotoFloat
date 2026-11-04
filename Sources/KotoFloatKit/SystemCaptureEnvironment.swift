@@ -24,6 +24,8 @@ final class SystemCaptureEnvironment: CaptureEnvironment {
         }
     }
 
+    func readClipboardText() throws -> String? { try SystemClipboard().readStableText() }
+
     static func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)

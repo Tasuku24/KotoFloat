@@ -196,6 +196,23 @@ import Testing
         }
     }
 
+    @Test func multilineStreamAndCopyKeepBlankLinesAndIndentation() async throws {
+        try await withEditor { model, service in
+            model.start(text: captured("Heading\n\n• First\n• Second\n\nEnd"))
+            await waitFor { await service.count == 1 }
+            let parts = ["見出し", "\n", "\n", "  • 最初\n", "  • 次", "\n\n", "終わり"]
+            for part in parts { await service.emit(part, at: 0) }
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            let expected = parts.joined()
+            #expect(model.resultText == expected)
+            let pasteboard = NSPasteboard(name: .init("KotoFloatLineBreakTests.\(UUID())"))
+            defer { pasteboard.releaseGlobally() }
+            #expect(model.copyResult(to: pasteboard))
+            #expect(pasteboard.string(forType: .string) == expected)
+        }
+    }
+
     @Test(arguments: ["configuration", "credentials", "glossary"])
     func preflightFailureKeepsSourceProtected(_ failure: String) throws {
         try withTranslationDefaults { defaults in

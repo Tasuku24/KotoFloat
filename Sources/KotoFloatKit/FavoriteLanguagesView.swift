@@ -65,16 +65,24 @@ struct FavoriteLanguagesSettings: View {
 
 struct FavoriteShortcutView: NSViewRepresentable {
     let preferences: TranslationPreferences
-    func makeNSView(context: Context) -> FavoriteShortcutControl { FavoriteShortcutControl(preferences: preferences) }
-    func updateNSView(_ view: FavoriteShortcutControl, context: Context) { view.preferences = preferences }
+    var onSelect: ((TranslationLanguage) -> Void)?
+    func makeNSView(context: Context) -> FavoriteShortcutControl {
+        FavoriteShortcutControl(preferences: preferences, onSelect: onSelect)
+    }
+    func updateNSView(_ view: FavoriteShortcutControl, context: Context) {
+        view.preferences = preferences
+        view.onSelect = onSelect
+    }
     static func dismantleNSView(_ view: FavoriteShortcutControl, coordinator: ()) { view.stopMonitoring() }
 }
 
 @MainActor final class FavoriteShortcutControl: NSView {
     var preferences: TranslationPreferences
+    var onSelect: ((TranslationLanguage) -> Void)?
     private var monitor: Any?
-    init(preferences: TranslationPreferences) {
+    init(preferences: TranslationPreferences, onSelect: ((TranslationLanguage) -> Void)? = nil) {
         self.preferences = preferences
+        self.onSelect = onSelect
         super.init(frame: .zero)
     }
     required init?(coder: NSCoder) { nil }
@@ -101,7 +109,11 @@ struct FavoriteShortcutView: NSViewRepresentable {
               event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
               let characters = event.charactersIgnoringModifiers, let number = Int(characters),
               (1...5).contains(number), preferences.favoriteLanguages.indices.contains(number - 1) else { return false }
-        if !event.isARepeat { preferences.targetLanguage = preferences.favoriteLanguages[number - 1] }
+        if !event.isARepeat {
+            let language = preferences.favoriteLanguages[number - 1]
+            if let onSelect { onSelect(language) }
+            else { preferences.targetLanguage = language }
+        }
         return true
     }
 }

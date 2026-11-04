@@ -7,6 +7,9 @@ struct LanguagePicker: NSViewRepresentable {
     var includeAutomatic = false
     var excluded: Set<TranslationLanguage> = []
     var buttonTitle: String?
+    var favoriteLanguages: [TranslationLanguage] = []
+    var controlSize: NSControl.ControlSize = .regular
+    var fontSize: CGFloat = NSFont.systemFontSize
     let onSelect: (TranslationLanguage) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -23,6 +26,8 @@ struct LanguagePicker: NSViewRepresentable {
     func updateNSView(_ button: NSButton, context: Context) {
         context.coordinator.picker = self
         button.title = buttonTitle ?? selection.title
+        button.controlSize = controlSize
+        button.font = .systemFont(ofSize: fontSize)
         button.setAccessibilityLabel(label)
         button.setAccessibilityValue(selection.title)
         button.toolTip = label + ": " + selection.title
@@ -38,7 +43,7 @@ struct LanguagePicker: NSViewRepresentable {
             guard let picker else { return }
             if popover.isShown { popover.performClose(nil); return }
             let controller = LanguagePickerController(selection: picker.selection, includeAutomatic: picker.includeAutomatic,
-                excluded: picker.excluded, onSelect: { [weak self] language in
+                excluded: picker.excluded, favoriteLanguages: picker.favoriteLanguages, onSelect: { [weak self] language in
                     self?.picker?.onSelect(language)
                     self?.popover.performClose(nil)
                 }, onDismiss: { [weak self] in self?.popover.performClose(nil) })
@@ -58,15 +63,18 @@ struct LanguagePicker: NSViewRepresentable {
     private let selection: TranslationLanguage
     private let includeAutomatic: Bool
     private let excluded: Set<TranslationLanguage>
+    private let favoriteLanguages: [TranslationLanguage]
     private let onSelect: (TranslationLanguage) -> Void
     private let onDismiss: () -> Void
     private(set) var results: [TranslationLanguage] = []
 
     init(selection: TranslationLanguage, includeAutomatic: Bool, excluded: Set<TranslationLanguage>,
+         favoriteLanguages: [TranslationLanguage] = [],
          onSelect: @escaping (TranslationLanguage) -> Void, onDismiss: @escaping () -> Void) {
         self.selection = selection
         self.includeAutomatic = includeAutomatic
         self.excluded = excluded
+        self.favoriteLanguages = favoriteLanguages
         self.onSelect = onSelect
         self.onDismiss = onDismiss
         super.init(nibName: nil, bundle: nil)
@@ -98,17 +106,21 @@ struct LanguagePicker: NSViewRepresentable {
         let hint = NSTextField(wrappingLabelWithString: L10n.text("language.modelHint"))
         hint.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         hint.textColor = .secondaryLabelColor
+        hint.preferredMaxLayoutWidth = 336
         let stack = NSStackView(views: [searchField, scroll, emptyLabel, hint])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 8
+        // Let content shrink past the controller's previous preferred height after filtering.
+        // 絞り込み後は、直前の推奨高さよりも内容に合わせた縮小を優先する。
+        stack.setHuggingPriority(.required, for: .vertical)
         stack.edgeInsets = NSEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         for child in [searchField, scroll, emptyLabel, hint] {
             child.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -24).isActive = true
         }
         scroll.heightAnchor.constraint(equalToConstant: 280).isActive = true
+        stack.widthAnchor.constraint(equalToConstant: 360).isActive = true
         view = stack
-        preferredContentSize = CGSize(width: 360, height: 400)
         refreshResults()
     }
 
@@ -117,7 +129,8 @@ struct LanguagePicker: NSViewRepresentable {
     func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         let language = results[row]
         let check = language == selection ? "✓ " : ""
-        let field = NSTextField(wrappingLabelWithString: check + language.title + "\n" + language.nativeName + " · " + language.rawValue)
+        let favorite = favoriteLanguages.firstIndex(of: language).map { "  ★ ⌘\($0 + 1)" } ?? ""
+        let field = NSTextField(wrappingLabelWithString: check + language.title + favorite + "\n" + language.nativeName + " · " + language.rawValue)
         field.font = .systemFont(ofSize: NSFont.systemFontSize)
         field.setAccessibilityLabel(field.stringValue)
         return field
@@ -127,12 +140,19 @@ struct LanguagePicker: NSViewRepresentable {
 
     private func refreshResults() {
         results = TranslationLanguage.search(searchField.stringValue, includeAutomatic: includeAutomatic).filter { !excluded.contains($0) }
+        if searchField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            var seen = Set<TranslationLanguage>()
+            let favorites = favoriteLanguages.filter { results.contains($0) && seen.insert($0).inserted }
+            results = favorites + results.filter { !seen.contains($0) }
+        }
         table.reloadData()
         emptyLabel.isHidden = !results.isEmpty
         if let index = results.firstIndex(of: selection) ?? results.indices.first {
             table.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
             table.scrollRowToVisible(index)
         } else { table.deselectAll(nil) }
+        view.layoutSubtreeIfNeeded()
+        preferredContentSize = view.fittingSize
     }
 
     func moveSelection(by offset: Int) {

@@ -121,6 +121,19 @@ import Observation
         else { beginTranslation(text: text, force: true) }
     }
 
+    // Explicit popup choices update and translate together; preference edits elsewhere do not send.
+    // ポップアップの明示的な言語選択だけを再翻訳につなげ、他の設定変更では送信しない。
+    func changePopupLanguages(source: TranslationLanguage? = nil, target: TranslationLanguage? = nil,
+                              captureState: CaptureModel.State) {
+        let previousSource = preferences.sourceLanguage
+        let previousTarget = preferences.targetLanguage
+        if let source { preferences.sourceLanguage = source }
+        if let target { preferences.targetLanguage = target }
+        guard previousSource != preferences.sourceLanguage || previousTarget != preferences.targetLanguage else { return }
+        guard case .captured = captureState else { return }
+        translateSource()
+    }
+
     func start(text: CapturedText, force: Bool = false) {
         if hasUnsentWork { requestConfirmation(.translate(text)); return }
         beginTranslation(text: text, force: force)

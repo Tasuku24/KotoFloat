@@ -98,6 +98,136 @@ import Testing
         }
     }
 
+    @Test(arguments: [true, false])
+    func popupLanguageChoiceRetranslatesCompletedText(changeSource: Bool) async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.start(text: fixture("Keep the source"))
+            await waitFor { await service.count == 1 }
+            await service.emit("Original result", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+
+            if changeSource { model.changePopupLanguages(source: .english, captureState: .captured(fixture("Source"))) }
+            else { model.changePopupLanguages(target: .french, captureState: .captured(fixture("Source"))) }
+            await waitFor { await service.count == 2 }
+            #expect(model.state == .running)
+            #expect(!model.canCopy)
+            #expect(model.output.isEmpty)
+            #expect(!model.directionChanged)
+            #expect(await service.inputs.last?.text == "Keep the source")
+            #expect(await service.inputs.last?.source == (changeSource ? .english : .automatic))
+            #expect(await service.inputs.last?.target == (changeSource ? .japanese : .french))
+            await service.emit("New result", at: 1)
+            await service.finish(at: 1)
+            await waitFor { model.state == .completed }
+            #expect(model.resultText == "New result")
+        }
+    }
+
+    @Test func popupRapidLanguageChoicesIgnoreObsoleteStreamsAndRepeatedSelection() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.start(text: fixture("Source"))
+            await waitFor { await service.count == 1 }
+            await service.emit("Old partial", at: 0)
+            model.changePopupLanguages(target: .french, captureState: .captured(fixture("Source")))
+            await waitFor { await service.count == 2 }
+            model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
+            await waitFor { await service.count == 3 }
+            let document = model.documentID
+            model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
+            #expect(model.documentID == document)
+            await service.emit("Obsolete Japanese", at: 0)
+            await service.emit("Obsolete French", at: 1)
+            await service.finish(at: 0, error: TranslationFailure.network)
+            await service.finish(at: 1)
+            #expect(model.output.isEmpty)
+            #expect(model.state == .running)
+            await service.emit("Current German", at: 2)
+            await service.finish(at: 2)
+            await waitFor { model.state == .completed }
+            #expect(model.resultText == "Current German")
+            #expect(await service.count == 3)
+            #expect(await service.inputs.map(\.target) == [.japanese, .french, .german])
+        }
+    }
+
+    @Test func popupLanguageChoicesDoNotSendBlankOversizedOrUnchangedInput() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.changePopupLanguages(target: .french, captureState: .captured(fixture("Source")))
+            #expect(preferences.targetLanguage == .french)
+            model.editSource(" \n ")
+            model.changePopupLanguages(source: .english, captureState: .captured(fixture("Source")))
+            model.editSource(String(repeating: "あ", count: 43_691))
+            model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
+            model.editSource("Unsent source")
+            model.changePopupLanguages(target: .automatic, captureState: .captured(fixture("Source")))
+            model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
+            #expect(preferences.targetLanguage == .german)
+            #expect(model.input == nil)
+            #expect(await service.count == 0)
+        }
+    }
+
+    @Test func popupLanguageChoicePreservesEditedResultUntilConfirmed() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.start(text: fixture("Source"))
+            await waitFor { await service.count == 1 }
+            await service.emit("Generated", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            model.editTranslation("Keep my edits")
+            model.changePopupLanguages(target: .french, captureState: .captured(fixture("Source")))
+            #expect(model.pendingAction != nil)
+            #expect(model.resultText == "Keep my edits")
+            #expect(await service.count == 1)
+            model.keepEditing()
+            model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
+            model.confirmPendingAction()
+            await waitFor { await service.count == 2 }
+            #expect(await service.inputs.last?.target == .german)
+            await service.emit("German result", at: 1)
+            await service.finish(at: 1)
+            await waitFor { model.state == .completed }
+        }
+    }
+
+    @Test func popupLanguageChoicesDuringCaptureDoNotRetranslateHiddenPreviousText() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { model.cancel() }
+            model.start(text: fixture("Previous source"))
+            await waitFor { await service.count == 1 }
+            await service.emit("Previous result", at: 0)
+            await service.finish(at: 0)
+            await waitFor { model.state == .completed }
+            let document = model.documentID
+            let states: [CaptureModel.State] = [.idle, .capturing, .manual, .needsConfirmation(fixture("Unconfirmed"))]
+            for state in states {
+                model.changePopupLanguages(target: .french, captureState: state)
+                #expect(preferences.targetLanguage == .french)
+                #expect(model.documentID == document)
+                #expect(model.sourceText == "Previous source")
+                #expect(model.resultText == "Previous result")
+                #expect(model.pendingAction == nil)
+                #expect(await service.count == 1)
+                preferences.targetLanguage = .japanese
+            }
+        }
+    }
+
     private func fixture(_ text: String) -> CapturedText { CapturedText(text: text, source: nil, bounds: nil, method: .manual) }
 }
 

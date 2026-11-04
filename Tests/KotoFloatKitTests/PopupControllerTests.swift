@@ -68,6 +68,7 @@ struct PopupControllerTests {
         try withController { controller in
             controller.showSample()
             try focus(controller.panel)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
             let parentFrame = controller.panel.frame
             let anchor = NSButton(title: "Language", target: nil, action: nil)
             anchor.frame = CGRect(x: 20, y: 20, width: 150, height: 30)
@@ -95,6 +96,7 @@ struct PopupControllerTests {
         try withController { controller in
             controller.showSample()
             try focus(controller.panel)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
             let parentFrame = controller.panel.frame
             let anchor = NSButton(title: "Language", target: nil, action: nil)
             anchor.frame = CGRect(x: 20, y: 20, width: 150, height: 30)
@@ -190,7 +192,9 @@ struct PopupControllerTests {
         panel = nil
     }
 
-    @Test func longTextDoesNotResizeOrMovePopup() async throws {
+    @Test func longTextGrowsToCapReopensAtFittedHeightAndShortTextShrinks() async throws {
+        _ = NSApplication.shared
+        NSApp.setActivationPolicy(.accessory)
         let suite = "KotoFloatLongTextTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         let controller = PopupController(preferences: PopupPreferences(defaults: defaults))
@@ -200,13 +204,21 @@ struct PopupControllerTests {
         }
         controller.showSample()
         let initialFrame = controller.panel.frame
+        let screen = try #require(controller.panel.screen?.visibleFrame)
+        let cap = PopupGeometry.maximumHeight(on: screen)
         controller.sample.isLong = true
-        try await Task.sleep(for: .milliseconds(150))
+        await waitFor { abs(controller.panel.frame.height - cap) < 1 }
         controller.panel.contentView?.layoutSubtreeIfNeeded()
-        #expect(controller.panel.frame == initialFrame)
+        #expect(controller.panel.frame.height > initialFrame.height)
+        #expect(controller.panel.frame.width == initialFrame.width)
         let content = try #require(controller.panel.contentView)
         let scrollView = try #require(findScrollView(in: content))
         #expect(try #require(scrollView.documentView).frame.height > scrollView.contentView.bounds.height)
+        controller.showSample()
+        await waitFor { abs(controller.panel.frame.height - cap) < 1 }
+        controller.sample.isLong = false
+        await waitFor { controller.panel.frame.height < 300 }
+        #expect(controller.panel.frame.height < cap)
     }
 
     @Test func escapeKeyEventClosesFocusedPanel() throws {
@@ -267,7 +279,7 @@ struct PopupControllerTests {
         }
     }
 
-    @Test func closeButtonAndReopenPreserveUserFrame() throws {
+    @Test func closeButtonAndReopenPreserveWidthAndTopEdge() throws {
         try withController { controller in
             controller.showSample()
             let usable = try #require(NSScreen.main?.visibleFrame)
@@ -277,7 +289,9 @@ struct PopupControllerTests {
             #expect(!controller.panel.isVisible)
             #expect(controller.preferences.savedFrame == target)
             controller.showSample()
-            #expect(controller.panel.frame == target)
+            #expect(controller.panel.frame.width == target.width)
+            #expect(controller.panel.frame.maxY == target.maxY)
+            #expect(controller.panel.frame.height < target.height)
         }
     }
 
@@ -307,7 +321,7 @@ struct PopupControllerTests {
         }
     }
 
-    @Test func capturedSelectionReusesPopupAndPreservesFrameAndFocus() async throws {
+    @Test func capturedSelectionReusesPopupAndPreservesWidthAndFocus() async throws {
         try await withCaptureController { controller, env in
             controller.showSample()
             let frame = controller.panel.frame
@@ -318,7 +332,9 @@ struct PopupControllerTests {
             #expect(controller.capture.state == .captured(CapturedText(text: "  selected\ntext  ", source: env.source, bounds: nil, method: .accessibility)))
             #expect(!controller.capture.showsSample)
             #expect(controller.panel.isVisible)
-            #expect(controller.panel.frame == frame)
+            #expect(controller.panel.frame.width == frame.width)
+            #expect(controller.panel.frame.maxY == frame.maxY)
+            #expect(controller.panel.frame.height < frame.height)
             #expect(controller.panel.windowNumber == number)
             #expect(NSWorkspace.shared.frontmostApplication?.processIdentifier == source)
             controller.setFocusMode(.autoRaiseCompatible)
