@@ -8,6 +8,7 @@ struct TranslationEditorView: View {
     @State private var showsDetails = false
     @State private var copied = false
     @State private var glossaryFailure: GlossaryFailure?
+    @State private var showsHistory = false
 
     func makeHostingView() -> NSHostingView<TranslationEditorView> {
         let host = NSHostingView(rootView: self)
@@ -45,15 +46,30 @@ struct TranslationEditorView: View {
 
     private var toolbar: some View {
         PopupToolbar {
-            Button { showsSource.toggle() } label: {
-                Label(L10n.text("editor.source"), systemImage: "sidebar.left")
-                    .font(.system(size: 14)).frame(minHeight: 36)
-                    .contentShape(Rectangle())
+            HStack(spacing: 20) {
+                Button { showsSource.toggle() } label: {
+                    Label(L10n.text("editor.source"), systemImage: "sidebar.left")
+                        .font(.system(size: 14)).frame(minHeight: 36)
+                        .contentShape(Rectangle())
+                }
+                .help(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
+                .accessibilityLabel(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
+                if let history = model.history {
+                    Button { showsHistory.toggle() } label: {
+                        Label(L10n.text("history.title"), systemImage: "clock.arrow.circlepath")
+                            .font(.system(size: 14)).frame(minHeight: 36).contentShape(Rectangle())
+                    }
+                    .help(L10n.text("history.title"))
+                    .popover(isPresented: $showsHistory, arrowEdge: .bottom) {
+                        TranslationHistoryView(store: history, open: { entry in
+                            showsHistory = false
+                            model.restoreHistory(entry)
+                        }, close: { showsHistory = false })
+                    }
+                }
+                TranslationEditorMenu(model: model, showsSource: $showsSource, showsDetails: $showsDetails,
+                    glossaryFailure: $glossaryFailure, openSettings: openSettings, openGlossaries: openGlossaries)
             }
-            .help(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
-            .accessibilityLabel(L10n.text(showsSource ? "editor.collapseSource" : "popup.showSource"))
-            TranslationEditorMenu(model: model, showsSource: $showsSource, showsDetails: $showsDetails,
-                glossaryFailure: $glossaryFailure, openSettings: openSettings, openGlossaries: openGlossaries)
         }
     }
 
@@ -67,7 +83,7 @@ struct TranslationEditorView: View {
                 Spacer(minLength: 0)
             }.padding(.horizontal, 28).frame(height: 72)
             editor(text: model.sourceText, editable: true, label: "editor.source", isSource: true,
-                onChange: model.editSource)
+                onChange: { model.editSource($0, isComposing: $1) })
                 .overlay(alignment: .topLeading) {
                     if model.sourceText.isEmpty {
                         Text(L10n.text("editor.sourcePlaceholder"))
@@ -90,6 +106,12 @@ struct TranslationEditorView: View {
                 LanguagePicker(label: L10n.text("translation.to"), selection: model.preferences.targetLanguage,
                     favoriteLanguages: model.preferences.favoriteLanguages, controlSize: .large, fontSize: 16) { model.preferences.targetLanguage = $0 }
                     .frame(minWidth: 90, idealWidth: 150, maxWidth: 180).frame(height: 36)
+                ZStack {
+                    if model.review.isBusy {
+                        ProgressView().controlSize(.small)
+                            .accessibilityLabel(L10n.text("review.loading"))
+                    }
+                }.frame(width: 16, height: 20)
                 Spacer(minLength: 0)
                 Button { copied = model.copyResult(to: .general) } label: {
                     Label(L10n.text(copied ? "editor.copyDone" : "editor.copy"),
@@ -103,7 +125,7 @@ struct TranslationEditorView: View {
                 .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
             }.padding(.horizontal, 28).frame(height: 72)
             editor(text: model.resultText, editable: model.state == .completed,
-                label: "editor.translation", isSource: false, onChange: model.editTranslation)
+                label: "editor.translation", isSource: false, onChange: { text, _ in model.editTranslation(text) })
                 .overlay {
                     if model.resultText.isEmpty, model.state != .completed {
                         VStack(spacing: 8) {
@@ -135,7 +157,11 @@ struct TranslationEditorView: View {
                 let status = PopupTranslationStatusView(model: model, openSettings: openSettings,
                     showDetails: { showsDetails = true })
                 if model.state == .running { ProgressView().controlSize(.small) }
-                let statusText = status.notice ?? L10n.text(model.state == .running ? "translation.working" : "translation.completed")
+                let reviewNotice = model.review.failure.map { L10n.text("review.failed") + " " + L10n.text("translation.error.\($0.rawValue)") }
+                    ?? (model.review.isCurrent && model.review.phase == .unmatched ? L10n.text("review.noMatch") : nil)
+                let translationNotice = reviewNotice ?? status.notice ?? L10n.text(model.state == .running ? "translation.working" : "translation.completed")
+                let historyNotice = model.history?.failure.map { L10n.text("history.error.\($0.rawValue)") }
+                let statusText = [translationNotice, historyNotice].compactMap { $0 }.joined(separator: " ")
                 Text(statusText)
                     .font(.system(size: 14)).foregroundStyle(.secondary).lineLimit(3)
                     .help(statusText)
@@ -177,6 +203,7 @@ struct TranslationEditorView: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
+                    .keyboardShortcut(.return, modifiers: .command)
                     .disabled(!model.canTranslate)
                     .help(L10n.text("editor.hint"))
                 }
@@ -214,11 +241,14 @@ struct TranslationEditorView: View {
     }
 
     private func editor(text: String, editable: Bool, label: String, isSource: Bool,
-                        onChange: @escaping (String) -> Void) -> some View {
+                        onChange: @escaping (String, Bool) -> Void) -> some View {
         TranslationTextEditor(text: text, editable: editable, label: L10n.text(label),
             documentID: model.documentID, undoManager: model.undoManager,
             backgroundColor: isSource ? .underPageBackgroundColor : .textBackgroundColor,
             fontSize: isSource ? 20 : 22,
-            help: isSource ? L10n.text("editor.sourcePlaceholder") : L10n.text("editor.hint"), onChange: onChange)
+            help: L10n.text(isSource ? "editor.hint" : "review.editorHint"),
+            review: model.review, side: isSource ? .source : .target,
+            highlightRange: isSource ? model.review.sourceHighlight : model.review.targetHighlight,
+            highlightedWord: isSource ? nil : model.review.targetWordRange, onChange: onChange)
     }
 }

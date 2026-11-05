@@ -42,6 +42,7 @@ struct TranslationEditorMenu: View {
                 .disabled(model.sourceText.isEmpty && model.output.isEmpty)
             Divider()
             Button(L10n.text("menu.settings"), action: openSettings)
+                .keyboardShortcut(",", modifiers: .command)
         } label: {
             Image(systemName: "ellipsis").font(.system(size: 16)).frame(width: 36, height: 36)
         }

@@ -58,13 +58,21 @@ The commands above intentionally build and launch the app. Native window tests r
 
 ### Main translator and editing
 
-Choose **Open translator…** in the menu bar or popup. The resizable window shares the current source, request, translation, and edits with the popup; opening it never translates again. Enter or paste text on the left, select source/target languages (or automatic source), and click **Translate**. Input, language, and glossary changes do not send requests automatically. Source input is limited to 128 KiB of UTF-8 per request; character counts are shown separately.
+Choose **Open translator…** in the menu bar or popup. The resizable window shares the current source, request, translation, and edits with the popup; opening it never translates again. Enter or paste text on the left and select source/target languages (or automatic source). Source edits translate after one second without typing; **Translate** or Command–Return translates immediately. Input-method composition and manual translation edits suppress automatic translation. Language and glossary changes alone do not send requests. Source input is limited to 128 KiB of UTF-8 per request; character counts are shown separately.
 
 Edit completed output on the right. **Original generated translation** reveals the unchanged model output after edits, while **Copy translation** copies your current edited wording. **Undo/Redo** and Command–Z / Shift–Command–Z operate within the current document. A new translation or confirmed clear/swap resets undo so old text cannot reappear in a new document. Editing the source stops active generation; existing output remains labeled with its original source/direction. Incomplete output stays read-only.
 
 Retranslating edited output, replacing an edited or untranslated draft with a new capture, **Clear**, and **Swap languages and text** show an in-app confirmation. **Keep editing** retains the current document. Further edits invalidate that confirmation. Swap requires an explicit source language and a completed result matching the current source/direction; it moves your edited translation to the source and waits for **Translate**. Automatic source asks the model to infer the language; it does not provide detected-language metadata for swapping.
 
-Closing a window preserves the shared draft in memory. Quitting warns about untranslated/failed source drafts, popup manual-entry drafts, or manual translation edits; copy important text before quitting. No translation history is saved. The popup keeps source text and request details behind the more menu while showing retranslation reminders and glossary review warnings when relevant. It uses only your configured LLM server. Alternative-word suggestions, file translation, speech, tone controls, and saved history are outside Phase 5.
+Closing a window preserves the shared draft in memory. Quitting warns about untranslated/failed source drafts, popup manual-entry drafts, or manual translation edits; unfinished drafts remain in memory until you quit. Completed translations and later edits are saved locally as described below. The popup keeps source text and request details behind the more menu while showing retranslation reminders and glossary review warnings when relevant. It uses only your configured LLM server. Clicking a translated word offers contextual alternatives and rewrites the matched passage when chosen. File translation, speech, and tone controls remain outside this editor.
+
+### Local translation history
+
+Open **History** in the Translator toolbar to search source/translation text, reopen a saved result without sending a request, delete one entry, or confirm deletion of all history. Results load 50 at a time. Reopening protects current drafts, edited output, and active translations with the existing confirmation flow.
+
+History is stored at `~/Library/Application Support/KotoFloat/History/history.sqlite` using native SQLite. Automatic translations, retranslation, and edits within the same draft update one entry; a new capture or clearing the document starts a new entry. Failed/cancelled/partial translations do not overwrite completed history. A deleted entry stays deleted even if its current document is edited again. No retention limit or automatic deletion is applied.
+
+Storage work runs off the main actor. Failures are shown without discarding the current document; **Retry** in History retries unsaved entries. Actual Quit waits for pending writes and offers retry, staying open, or explicitly quitting without unsaved entries if saving fails. Unknown/corrupt files are preserved. History is local, without application-level encryption or synchronization; macOS account permissions protect newly created files. SQLite may keep companion `-wal`/`-shm` files while running, so quit the app before copying the history directory for a backup.
 
 ### Glossaries
 
@@ -100,11 +108,11 @@ Limits are 100 glossaries, 10,000 total entries, 16 MiB per library/CSV, and 120
 - Connect to a self-hosted local LLM server without tying the app to a specific model. LM Studio's OpenAI-compatible API is the first integration target.
 - Let users copy translations and edit them in a shared main window.
 
-The first release includes all seven phases. Final model selection and click-based alternative translations come afterward. Translation and glossary logic will remain separate from the UI so that the popup and main window can share it.
+The first release includes all seven phases. Final model selection remains a separate acceptance step. Translation and glossary logic will remain separate from the UI so that the popup and main window can share it.
 
 ### Data handling principles
 
-- Captured and translated text stays in memory; source text, output, and tokens are not logged or saved as history. Translation sends confirmed text only to the server configured by the user.
+- Completed source/translation pairs and subsequent translation edits are saved in local history. Unfinished drafts remain in memory. Text and tokens are not logged, and credentials are not included in history. Translation uses only the server configured by the user; opening saved history sends no request.
 - Copy fallback restores readable clipboard formats only if its observed generation is unchanged; newer updates, app switches, and input interrupt capture. See the verification record for the limits of cross-process clipboard restoration.
 - Known empty selections and protected password fields are not copied. Copied text must be confirmed before later translation features can use it.
 - HTTPS certificates use system validation, and redirects are rejected. HTTP is allowed on loopback; other HTTP requires explicit opt-in. The app's transport setting permits custom HTTP endpoints, while application validation enforces this choice. Prefer HTTPS or a trusted VPN for remote access.
@@ -174,13 +182,21 @@ python3 scripts/test_with_mock_server.py
 
 ### メイン翻訳画面と編集
 
-メニューバーまたはポップアップの **翻訳画面を開く…** を選びます。サイズ変更可能な画面が原文・要求・訳文・編集内容をポップアップと共有し、開くだけでは再翻訳しません。左側に入力・貼り付けし、翻訳元／翻訳先言語（翻訳元は自動も可）を選んで **翻訳** を押します。原文・言語・用語集の変更だけでは送信しません。送信原文はUTF-8で128 KiBまでで、文字数は別に表示します。
+メニューバーまたはポップアップの **翻訳画面を開く…** を選びます。サイズ変更可能な画面が原文・要求・訳文・編集内容をポップアップと共有し、開くだけでは再翻訳しません。左側に入力・貼り付けし、翻訳元／翻訳先言語（翻訳元は自動も可）を選びます。原文の入力が1秒間止まると自動翻訳し、**翻訳** またはCommand–Returnですぐに実行できます。IME変換中と訳文を手で編集している場合は自動翻訳しません。言語・用語集の変更だけでは送信しません。送信原文はUTF-8で128 KiBまでで、文字数は別に表示します。
 
 右側の完成訳を直接編集できます。編集後の **生成された元の訳文** で元の出力を確認でき、**訳文をコピー** は現在の編集内容をコピーします。**取り消す／やり直す** とCommand–Z／Shift–Command–Zは現在の文書内で働きます。新しい翻訳、確認後のクリア／入れ替えでUndo履歴を消し、古い文章が新しい文書へ戻ることを防ぎます。生成中の原文編集は要求を停止し、既存結果には要求時の原文・方向を表示します。未完了の出力は編集できません。
 
 編集訳の再翻訳、編集済み／未翻訳の下書きを新取得文で置換、**クリア**、**言語と文章を入れ替える** ではアプリ内で確認します。**編集を続ける** で保持し、確認待ち中にさらに編集すると確認を無効化します。入れ替えには翻訳元の明示選択と現在の原文・方向に一致する完成訳が必要です。編集訳を原文へ移し、**翻訳** の操作を待ちます。翻訳元の自動はモデルに推定を指示しますが、入れ替えに使う判定言語情報は返しません。
 
-画面を閉じても共有下書きはメモリに残ります。未翻訳／失敗した原文、ポップアップの未確定手入力、編集訳を残してアプリを終了する場合は確認します。重要な文章は終了前にコピーしてください。翻訳履歴は保存しません。ポップアップの原文と要求の詳細はその他メニューから開き、再翻訳の案内や用語集の注意は必要時に表示します。接続先は設定したLLMサーバーだけです。単語の代替候補、文書翻訳、音声、文体指定、履歴保存は第5段階の範囲外です。
+画面を閉じても共有下書きはメモリに残ります。未翻訳／失敗した原文、ポップアップの未確定手入力、編集訳を残してアプリを終了する場合は確認します。未完成の下書きは終了までメモリに保持します。完成した翻訳とその後の編集は、下記のローカル履歴に保存します。ポップアップの原文と要求の詳細はその他メニューから開き、再翻訳の案内や用語集の注意は必要時に表示します。接続先は設定したLLMサーバーだけです。訳文の単語をクリックすると文脈に合う別訳候補を表示し、選んだ表現で対応する文章を自然に書き直します。文書翻訳・音声・文体指定はこのエディタの対象外です。
+
+### ローカル翻訳履歴
+
+Translator上部の **履歴** で、原文・訳文の検索、通信しない再表示、個別削除、確認付きの全削除ができます。結果は50件ずつ読み込みます。履歴の読み込み時は、現在の下書き・編集済み訳文・進行中の翻訳を既存の確認操作で保護します。
+
+保存先は`~/Library/Application Support/KotoFloat/History/history.sqlite`で、標準のSQLiteを使います。同じ下書き内の自動翻訳・再翻訳・編集は同じ項目を更新し、新しい取得や文書の消去で別の項目にします。失敗・取消・未完成の訳文は完成済みの履歴を上書きしません。削除した項目は、その文章を再編集しても復活させません。保持件数の制限や自動削除は行いません。
+
+保存処理は画面処理から分離します。失敗しても現在の文章は保持し、履歴内の **再試行** で未保存分を保存し直せます。実際にアプリを終了するときは保存待ちを完了し、失敗が残る場合は再試行・アプリの維持・未保存分を破棄して終了の選択を表示します。未知形式・破損ファイルは保持します。履歴はMac内に保存し、アプリ独自の暗号化・同期は行いません。新しく作るファイルはmacOSの利用者権限で保護します。実行中にはSQLiteの`-wal`／`-shm`ファイルも使う場合があるため、バックアップ時はアプリを終了してから履歴フォルダをコピーしてください。
 
 ### 用語集
 
@@ -211,11 +227,11 @@ python3 scripts/test_with_mock_server.py
 - 自分で運用するローカルLLMサーバーへ接続し、モデルを固定しない。最初の接続対象はLM StudioのOpenAI互換API。
 - 翻訳結果をコピーし、共通のメイン画面で編集できるようにする。
 
-初期版には7段階すべてを含めます。最終的なモデル選定とクリックによる別訳候補の選択はその後です。翻訳・用語集の処理を画面から分離し、ポップアップとメイン画面で共有します。
+初期版には7段階すべてを含めます。最終的なモデル選定は別途の受け入れ確認とします。翻訳・用語集の処理を画面から分離し、ポップアップとメイン画面で共有します。
 
 ### データの取り扱い方針
 
-- 取得文・訳文はメモリ内で保持し、原文・訳文・トークンをログや履歴へ保存しません。翻訳時は、確定した文章だけを利用者が設定したサーバーへ送信します。
+- 完成した原文・訳文と、その後の訳文編集をMac内の履歴へ保存します。未完成の下書きはメモリに保持します。本文・トークンはログに記録せず、認証情報を履歴に含めません。翻訳には利用者が設定したサーバーだけを使い、履歴を開く操作では送信しません。
 - コピー経由の取得では、観測した世代が変わらない場合だけ読み取れた形式を復元します。新しい更新・アプリ切り替え・入力で処理を中断します。プロセス間の復元の制限は検証記録を参照してください。
 - 空選択と保護されたパスワード欄はコピーしません。コピー結果は利用者が確認してから後続の翻訳機能へ渡します。
 - HTTPS証明書はシステムで検証し、リダイレクトは拒否します。HTTPはループバックで許可し、それ以外では明示的な有効化が必要です。アプリの通信設定では任意のHTTP接続先を扱えるようにし、アプリ内の検証でこの選択を適用します。遠隔接続にはHTTPSまたは信頼するVPNを推奨します。

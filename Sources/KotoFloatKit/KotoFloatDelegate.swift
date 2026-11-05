@@ -20,7 +20,8 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         let credentials = KeychainCredentialStore()
         let glossaries = GlossaryStore()
         glossaryStore = glossaries
-        let translation = TranslationModel(preferences: translationPreferences, credentials: credentials, glossaries: glossaries)
+        let translation = TranslationModel(preferences: translationPreferences, credentials: credentials, glossaries: glossaries,
+            history: TranslationHistoryStore())
         connectionModel = ConnectionModel(preferences: translationPreferences, credentials: credentials)
         let controller = PopupController(preferences: PopupPreferences(), translation: translation)
         controller.openSettings = { [weak self] in self?.showSettings() }
@@ -46,13 +47,37 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     }
 
     public func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard popupController?.translation?.hasUnsentWork == true || popupController?.capture.hasUnsentWork == true else { return .terminateNow }
-        let alert = NSAlert()
-        alert.messageText = L10n.text("editor.quitTitle")
-        alert.informativeText = L10n.text("editor.quitMessage")
-        alert.addButton(withTitle: L10n.text("editor.keepEditing"))
-        alert.addButton(withTitle: L10n.text("menu.quit"))
-        return alert.runModal() == .alertSecondButtonReturn ? .terminateNow : .terminateCancel
+        if popupController?.translation?.hasUnsentWork == true || popupController?.capture.hasUnsentWork == true {
+            let alert = NSAlert()
+            alert.messageText = L10n.text("editor.quitTitle")
+            alert.informativeText = L10n.text("editor.quitMessage")
+            alert.addButton(withTitle: L10n.text("editor.keepEditing"))
+            alert.addButton(withTitle: L10n.text("menu.quit"))
+            guard alert.runModal() == .alertSecondButtonReturn else { return .terminateCancel }
+        }
+        popupController?.translation?.cancel()
+        guard let history = popupController?.translation?.history else { return .terminateNow }
+        Task {
+            await history.flush()
+            var shouldQuit = true
+            if history.hasUnsavedEntries {
+                let alert = NSAlert()
+                alert.messageText = L10n.text("history.quitTitle")
+                alert.informativeText = L10n.text("history.quitMessage")
+                alert.addButton(withTitle: L10n.text("history.retry"))
+                alert.addButton(withTitle: L10n.text("editor.keepEditing"))
+                alert.addButton(withTitle: L10n.text("history.quitWithoutSaving"))
+                switch alert.runModal() {
+                case .alertFirstButtonReturn:
+                    await history.retry()
+                    shouldQuit = !history.hasUnsavedEntries
+                case .alertThirdButtonReturn: break
+                default: shouldQuit = false
+                }
+            }
+            sender.reply(toApplicationShouldTerminate: shouldQuit)
+        }
+        return .terminateLater
     }
 
     @objc func moveToBackground() {
@@ -211,6 +236,10 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.paste"), action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.copy"), action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
         editMenu.addItem(NSMenuItem(title: L10n.text("menu.selectAll"), action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+        editMenu.addItem(.separator())
+        let reviewItem = NSMenuItem(title: L10n.text("review.action"), action: #selector(DocumentTextView.reviewSelection(_:)), keyEquivalent: "\r")
+        reviewItem.keyEquivalentModifierMask = [.command, .option]
+        editMenu.addItem(reviewItem)
         editItem.submenu = editMenu
         mainMenu.addItem(editItem)
         return mainMenu

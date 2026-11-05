@@ -149,6 +149,49 @@ struct LocalModelIntegrationTests {
         #expect(lines.filter { $0.hasPrefix("• ") }.count == 2)
     }
 
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_REVIEW_REPORT"] != nil))
+    @MainActor func actualModelProvidesContextualAlternativesAndRewritesThePassage() async throws {
+        let (server, token) = try configuration()
+        let client = OpenAITranslationClient(server: server, token: token)
+        let document = TranslationReviewDocument(source: "これは重要な出来事です。", target: "This is an important event.",
+            sourceLanguage: .japanese, targetLanguage: .english)
+        let query = try #require(document.query(side: .target, at: 13))
+        let request = TranslationReviewRequest(document: document, query: query)
+        let match = try await client.review(request).validated(for: request)
+        let preferred = try #require(match.alternatives.first(where: { !"aeiou".contains($0.lowercased().prefix(1)) }) ?? match.alternatives.first)
+        let rewrite = TranslationRewriteRequest(document: document, match: match, originalWord: "important", wordRange: try #require(query.wordRange), preferred: preferred)
+        let revised = try await client.rewrite(rewrite)
+        struct Report: Encodable { let model: String; let candidates: [String]; let chosen: String; let revised: String }
+        let report = Report(model: server.model, candidates: match.alternatives, chosen: preferred, revised: revised)
+        let path = try #require(ProcessInfo.processInfo.environment["KOTOFLOAT_REVIEW_REPORT"])
+        try JSONEncoder().encode(report).write(to: URL(fileURLWithPath: path))
+        #expect(revised.localizedCaseInsensitiveContains(preferred))
+        if !"aeiou".contains(preferred.lowercased().prefix(1)) {
+            #expect(!revised.localizedCaseInsensitiveContains("an " + preferred))
+        }
+        #expect(match.sourceRange == document.sourceSentences[0].range)
+        #expect(match.targetRange == document.targetSentences[0].range)
+    }
+
+    @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_REVIEW_REPORT"] != nil))
+    @MainActor func actualModelAlignsReorderedSentences() async throws {
+        let (server, token) = try configuration()
+        let client = OpenAITranslationClient(server: server, token: token)
+        let document = TranslationReviewDocument(source: "窓を閉めてください。ドアを開けてください。", target: "Open the door. Close the window.",
+            sourceLanguage: .japanese, targetLanguage: .english)
+        let query = try #require(document.query(side: .target, at: 0))
+        let request = TranslationReviewRequest(document: document, query: query)
+        let reply = try await client.review(request)
+        let match = try reply.validated(for: request)
+        let path = try #require(ProcessInfo.processInfo.environment["KOTOFLOAT_REVIEW_REPORT"])
+        struct Report: Encodable { let sourceIDs: [Int]; let targetIDs: [Int]; let alternatives: [String] }
+        let report = Report(sourceIDs: reply.source_sentence_ids, targetIDs: reply.target_sentence_ids, alternatives: match.alternatives)
+        try JSONEncoder().encode(report).write(to: URL(fileURLWithPath: path).deletingPathExtension().appendingPathExtension("alignment.json"))
+        #expect(document.text(in: match.sourceRange, side: .source) == "ドアを開けてください。")
+        #expect(document.text(in: match.targetRange, side: .target) == "Open the door.")
+        #expect(!match.alternatives.contains { $0.localizedCaseInsensitiveContains("close") || $0.localizedCaseInsensitiveContains("shut") })
+    }
+
     // Capture real outputs for human review; a successful request does not prove translation quality.
     // 実際の出力を目視評価用に保存する。通信の成功は翻訳品質の成功を意味しない。
     @Test(.enabled(if: ProcessInfo.processInfo.environment["KOTOFLOAT_EVALUATION_REPORT"] != nil))

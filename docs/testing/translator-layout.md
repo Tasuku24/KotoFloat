@@ -56,6 +56,18 @@ The user requested DeepL-like readability, explicitly excluding imitation of its
 
 The existing native layout check also inspects a narrow result pane at the minimum window size. Enlarging text reduces the number of visible lines, so independent native scrolling remains essential. Hosted light/dark captures and the focused native check passed; these do not establish VoiceOver or IME acceptance.
 
+### Automatic translation and Command-Return (2026-11-05)
+
+Translate/Retranslate also runs with Command-Return in the Translator. Both the shortcut and button use the existing action, including confirmation before replacing an edited result. While a translation is running, the shortcut does not trigger another request or act as Stop.
+
+Source edits now translate after one second without further input. The shared model owns one cancellable delay; each edit resets it, and an explicit translation consumes it. Marked input-method text updates the draft but does not schedule a request until committed. Empty/oversized input and manually edited translations do not translate automatically. Cancellation, clearing, edits to the result, or a discard confirmation cancel the pending delay; changed language, server, or glossary snapshots reject it. Ordinary translation retains its stale-response protection. There is no polling or global key monitor.
+
+Background tests cover the idle interval, reset on typing, manual/automatic deduplication, stale streams, input validation, draft protection, and cancellation/settings changes. A separately run native test invokes Command-Return for Translate and Retranslate and exercises marked-text/commit events in a hidden editor. It does not display a window, change focus, or establish physical IME acceptance.
+
+### Translator toolbar spacing and Settings shortcut (2026-11-05)
+
+Group the Translator's Source, History, and more controls with 20-point spacing instead of the shared toolbar's 8-point spacing. The popup keeps its existing spacing and native window-button alignment. The Settings entry in the Translator menu also displays Command-Comma and uses the same existing Settings action. Both standard application/status menus already bind Command-Comma; no global input monitor is added.
+
 ## 日本語
 
 利用者は2026年11月2日に、生成した3案目の左右比較レイアウトを選択した。変更対象はTranslatorの編集ウィンドウのみとする。ポップアップの現在のレイアウト、原文の初期非表示、本文に応じた高さ、フォーカス動作は維持する。Liquid Glassは使用しない。
@@ -111,3 +123,15 @@ Translatorとポップアップの両方で、標準の閉じる・最小化・�
 利用者はDeepLのような読みやすさを求め、配色や意匠の模倣は明確に除外した。原文を16から20ポイント、訳文を17から22ポイントに拡大する。領域の見出しと状態表示は14ポイント、言語選択は16ポイント、コピーは15ポイント、主要操作は16ポイントとする。見出し行を72ポイント、副操作のクリック範囲を36ポイントに広げ、本文の内側余白と行間・段落間隔も合わせて拡大する。既存の配色、初期・保存済みウィンドウサイズ、分割動作、ポップアップの配置は維持する。
 
 既存のネイティブ配置確認では、最小ウィンドウで訳文領域を狭くした状態も確認する。文字の拡大に伴って一度に表示できる行数は減るため、左右独立の標準スクロールを維持する。ライト・ダークの本文描画と対象のネイティブ検証が成功した。これらはVoiceOverやIMEの動作確認を意味しない。
+
+### 自動翻訳とCommand-Return（2026年11月5日）
+
+Translatorの翻訳・再翻訳はCommand-Returnでも実行できる。ボタンと同じ既存の操作を呼び出し、編集した訳文を置き換える場合の確認も維持する。翻訳中は、このショートカットで追加の要求を送ったり停止したりしない。
+
+原文の入力が1秒間止まると自動翻訳する。共有モデルが取り消し可能な待機処理を1つ管理し、入力を続けるとリセットし、明示的な翻訳を実行すると解除する。IMEの変換中は下書きだけを更新し、確定するまで要求を予約しない。空白・上限超過の原文や手で編集した訳文は自動翻訳しない。取り消し、文書の消去、訳文の編集、破棄確認で待機を取り消し、言語・サーバー・用語集が変わっていた場合も送信しない。古い応答による上書き防止は既存の翻訳処理を使う。ポーリングやグローバルなキー監視は追加しない。
+
+通常テストで待機時間、入力によるリセット、手動実行との重複防止、古い応答、入力の検査、下書きの保護、取り消し・設定変更を確認する。別途実行するネイティブテストでは、非表示のエディタで翻訳・再翻訳のCommand-Returnと変換中・確定のイベントを確認する。ウィンドウの表示やフォーカス変更は行わず、実際のIME操作の受け入れ確認とは区別する。
+
+### Translator上部の間隔と設定ショートカット（2026年11月5日）
+
+Translatorの原文・履歴・その他の操作をまとめ、共通の上部バーの8ポイントから20ポイントへ間隔を広げる。ポップアップの間隔と標準ウィンドウボタンの整列は維持する。Translatorの設定項目にもCommand-Commaを表示し、既存の設定操作を呼び出す。標準のアプリメニューとメニューバーメニューには既にCommand-Commaが登録されており、グローバルな入力監視は追加しない。

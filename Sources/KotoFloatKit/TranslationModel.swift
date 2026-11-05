@@ -18,37 +18,45 @@ import Observation
     @ObservationIgnored private var pendingGlossaryRevision = 0
 
     enum PendingAction {
-        case translate(CapturedText), clear, swap
+        case translate(CapturedText), clear, swap, restore(TranslationHistoryEntry)
         var messageKey: String {
             switch self {
             case .translate: "editor.confirm.replace"
             case .clear: "editor.confirm.clear"
             case .swap: "editor.confirm.swap"
+            case .restore: "history.confirmRestore"
             }
         }
     }
     let preferences: TranslationPreferences
     let glossaries: GlossaryStore?
+    let history: TranslationHistoryStore?
+    @ObservationIgnored private var historyIdentity: (id: UUID, createdAt: Date)?
+    @ObservationIgnored private var pendingContinuesHistory = false
     @ObservationIgnored private let credentials: any CredentialStore
     @ObservationIgnored private let clientFactory: @MainActor (ServerConfiguration, String?) -> any TranslationServing
     @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var automaticTranslationTask: Task<Void, Never>?
     @ObservationIgnored private var requestID = UUID()
     @ObservationIgnored private var capturedText: CapturedText?
     @ObservationIgnored private var configuration: ServerConfiguration?
     @ObservationIgnored private var configurationRevision = 0
+    @ObservationIgnored lazy var review = TranslationReviewModel(document: self)
     private var glossaryRevision = 0
 
     init(preferences: TranslationPreferences, credentials: any CredentialStore, glossaries: GlossaryStore? = nil,
+         history: TranslationHistoryStore? = nil,
          clientFactory: @escaping @MainActor (ServerConfiguration, String?) -> any TranslationServing = { OpenAITranslationClient(server: $0, token: $1) }) {
         self.preferences = preferences
         self.credentials = credentials
         self.glossaries = glossaries
+        self.history = history
         self.clientFactory = clientFactory
         undoManager.groupsByEvent = false
         undoManager.levelsOfUndo = 100
     }
 
-    deinit { task?.cancel() }
+    deinit { task?.cancel(); automaticTranslationTask?.cancel() }
 
     var glossaryChanged: Bool { input != nil && glossaryRevision != (glossaries?.revision ?? 0) }
 
@@ -77,13 +85,49 @@ import Observation
     var canUndo: Bool { _ = revision; return undoManager.canUndo }
     var canRedo: Bool { _ = revision; return undoManager.canRedo }
 
-    func editSource(_ text: String) {
-        guard text != sourceText else { return }
-        let previous = sourceText
-        registerUndo { $0.editSource(previous) }
-        cancel()
-        sourceText = text
-        didEdit()
+    var canReview: Bool {
+        state == .completed && pendingAction == nil && !sourceChanged && !directionChanged && !glossaryChanged &&
+            configuration == preferences.server && configurationRevision == preferences.revision &&
+            !sourceText.isEmpty && !resultText.isEmpty && glossaries?.failure == nil
+    }
+
+    func reviewClient() throws -> any TranslationServing {
+        guard canReview, let server = preferences.server else { throw TranslationFailure.requestRejected }
+        do { return clientFactory(server, try credentials.token(for: server.baseURL.absoluteString)) }
+        catch { throw TranslationFailure.credentialsUnavailable }
+    }
+
+    func editSource(_ text: String, isComposing: Bool = false) {
+        cancelAutomaticTranslation()
+        if text != sourceText {
+            let previous = sourceText
+            registerUndo { $0.editSource(previous) }
+            cancel()
+            sourceText = text
+            didEdit()
+        }
+        guard !isComposing, canTranslate, !hasEdits, pendingAction == nil,
+              sourceChanged || state != .completed else { return }
+        let revision = revision
+        let settingsRevision = preferences.revision
+        let glossaryRevision = glossaries?.revision ?? 0
+        let sourceLanguage = preferences.sourceLanguage
+        let targetLanguage = preferences.targetLanguage
+        automaticTranslationTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(1)) }
+            catch { return }
+            guard let self, !Task.isCancelled, self.revision == revision,
+                  preferences.revision == settingsRevision, (glossaries?.revision ?? 0) == glossaryRevision,
+                  preferences.sourceLanguage == sourceLanguage, preferences.targetLanguage == targetLanguage,
+                  pendingAction == nil, !hasEdits else { return }
+            automaticTranslationTask = nil
+            translateSource()
+        }
+    }
+
+    private func cancelAutomaticTranslation() {
+        automaticTranslationTask?.cancel()
+        automaticTranslationTask = nil
     }
 
     func editTranslation(_ text: String) {
@@ -92,6 +136,7 @@ import Observation
         registerUndo { $0.editTranslation(previous) }
         editedOutput = text == output ? nil : text
         didEdit()
+        saveHistory()
     }
 
     private func registerUndo(_ action: @escaping @MainActor (TranslationModel) -> Void) {
@@ -104,6 +149,8 @@ import Observation
     }
 
     private func didEdit() {
+        cancelAutomaticTranslation()
+        review.invalidate()
         revision += 1
         pendingAction = nil
     }
@@ -117,8 +164,8 @@ import Observation
     func translateSource() {
         guard canTranslate else { return }
         let text = CapturedText(text: sourceText, source: capturedText?.source, bounds: nil, method: .manual)
-        if hasEdits { requestConfirmation(.translate(text)) }
-        else { beginTranslation(text: text, force: true) }
+        if hasEdits { requestConfirmation(.translate(text), continuingHistory: true) }
+        else { beginTranslation(text: text, force: true, continuingHistory: true) }
     }
 
     // Explicit popup choices update and translate together; preference edits elsewhere do not send.
@@ -151,8 +198,10 @@ import Observation
 
     func keepEditing() { pendingAction = nil }
 
-    private func requestConfirmation(_ action: PendingAction) {
+    private func requestConfirmation(_ action: PendingAction, continuingHistory: Bool = false) {
+        cancelAutomaticTranslation()
         pendingAction = action
+        pendingContinuesHistory = continuingHistory
         pendingRevision = revision
         pendingDirection = [preferences.sourceLanguage, preferences.targetLanguage]
         pendingSettingsRevision = preferences.revision
@@ -167,7 +216,7 @@ import Observation
               pendingSettingsRevision == preferences.revision,
               pendingGlossaryRevision == (glossaries?.revision ?? 0) else { return }
         switch action {
-        case .translate(let text): beginTranslation(text: text, force: true)
+        case .translate(let text): beginTranslation(text: text, force: true, continuingHistory: pendingContinuesHistory)
         case .clear: cancel(clear: true)
         case .swap:
             guard canSwapLanguages else { return }
@@ -177,15 +226,18 @@ import Observation
             preferences.targetLanguage = oldSource
             cancel(clear: true)
             sourceText = text
+        case .restore(let entry): applyHistory(entry)
         }
     }
 
-    private func beginTranslation(text: CapturedText, force: Bool) {
+    private func beginTranslation(text: CapturedText, force: Bool, continuingHistory: Bool = false) {
         let next = TranslationInput(text: text.text, source: preferences.sourceLanguage, target: preferences.targetLanguage)
         if !force, state == .running, input?.text == next.text, input?.source == next.source, input?.target == next.target,
            configuration == preferences.server, configurationRevision == preferences.revision,
            glossaryRevision == (glossaries?.revision ?? 0) { return }
+        let identity = continuingHistory ? historyIdentity : nil
         cancel(clear: true)
+        historyIdentity = identity
         capturedText = text
         sourceText = text.text
         input = next
@@ -217,6 +269,7 @@ import Observation
                 guard requestID == id, !Task.isCancelled else { return }
                 state = output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .failed(.emptyResponse) : .completed
                 task = nil
+                saveHistory()
             } catch {
                 guard let self, requestID == id, !Task.isCancelled else { return }
                 state = error is CancellationError ? .cancelled : .failed(error as? TranslationFailure ?? .network)
@@ -229,7 +282,40 @@ import Observation
         translateSource()
     }
 
+    private func saveHistory() {
+        guard state == .completed, let input, let history else { return }
+        let now = Date()
+        let create = historyIdentity == nil
+        let identity = historyIdentity ?? (UUID(), now)
+        historyIdentity = identity
+        history.save(TranslationHistoryEntry(id: identity.id, source: input.text, translation: resultText,
+            sourceLanguage: input.source, targetLanguage: input.target, createdAt: identity.createdAt,
+            updatedAt: now), create: create)
+    }
+
+    func restoreHistory(_ entry: TranslationHistoryEntry) {
+        guard (try? entry.validated()) != nil else { return }
+        if hasUnsentWork || state == .running { requestConfirmation(.restore(entry)) }
+        else { applyHistory(entry) }
+    }
+
+    private func applyHistory(_ entry: TranslationHistoryEntry) {
+        cancel(clear: true)
+        preferences.sourceLanguage = entry.sourceLanguage
+        preferences.targetLanguage = entry.targetLanguage
+        sourceText = entry.source
+        output = entry.translation
+        input = TranslationInput(text: entry.source, source: entry.sourceLanguage, target: entry.targetLanguage)
+        configuration = preferences.server
+        configurationRevision = preferences.revision
+        glossaryRevision = glossaries?.revision ?? 0
+        historyIdentity = (entry.id, entry.createdAt)
+        state = .completed
+    }
+
     func cancel(clear: Bool = false) {
+        cancelAutomaticTranslation()
+        review.invalidate()
         requestID = UUID()
         task?.cancel()
         task = nil
@@ -240,6 +326,7 @@ import Observation
             capturedText = nil
             sourceText = ""
             editedOutput = nil
+            historyIdentity = nil
             pendingAction = nil
             documentID = UUID()
             revision += 1
