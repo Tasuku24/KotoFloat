@@ -6,7 +6,7 @@ struct TranslationTextEditor: NSViewRepresentable {
     let editable: Bool
     let label: String
     let documentID: UUID
-    let undoManager: UndoManager
+    let undoManager: UndoManager?
     var backgroundColor: NSColor = .textBackgroundColor
     var fontSize: CGFloat = 17
     var help: String?

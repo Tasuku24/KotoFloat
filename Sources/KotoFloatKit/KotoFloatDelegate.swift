@@ -7,6 +7,7 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
     private var popupController: PopupController?
     private var statusItem: NSStatusItem?
     private var settingsWindow: NSWindow?
+    private var settingsContentView: NSHostingView<SettingsView>?
     private var connectionModel: ConnectionModel?
     private var glossaryStore: GlossaryStore?
     private var glossaryWindow: NSWindow?
@@ -170,17 +171,31 @@ public final class KotoFloatDelegate: NSObject, NSApplicationDelegate, NSWindowD
 
     @objc private func showSettings() {
         guard let popupController, let connectionModel else { return }
-        if settingsWindow == nil {
-            let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.contentSize),
-                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
-            window.title = L10n.text("settings.title")
-            window.isReleasedWhenClosed = false
-            window.contentView = NSHostingView(rootView: SettingsView(controller: popupController, connection: connectionModel))
-            window.center()
-            settingsWindow = window
-        }
+        let window = prepareSettingsWindow(controller: popupController, connection: connectionModel)
+        // Match Translator: order the fresh window on this Space before activating the app.
+        // Translatorと同様に、新しいウィンドウを現在のスペースに表示してからアプリをアクティブにする。
+        window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        settingsWindow?.makeKeyAndOrderFront(nil)
+    }
+
+    func prepareSettingsWindow(controller: PopupController, connection: ConnectionModel) -> NSWindow {
+        if let settingsWindow, settingsWindow.isVisible, settingsWindow.isOnActiveSpace { return settingsWindow }
+        let previousFrame = settingsWindow?.frame
+        settingsWindow?.close()
+        // Keep the selected tab and unsaved inputs while discarding the old Space association.
+        // 選択中のタブと未保存の入力を保持し、以前のスペースへの所属を破棄する。
+        if settingsContentView == nil {
+            settingsContentView = NSHostingView(rootView: SettingsView(controller: controller, connection: connection))
+        }
+        let window = NSWindow(contentRect: CGRect(origin: .zero, size: SettingsView.contentSize),
+                              styleMask: [.titled, .closable], backing: .buffered, defer: false)
+        window.title = L10n.text("settings.title")
+        window.isReleasedWhenClosed = false
+        window.contentView = settingsContentView
+        if let previousFrame { window.setFrame(previousFrame, display: false) }
+        else { window.center() }
+        settingsWindow = window
+        return window
     }
 
     private func configureMenuBar() {

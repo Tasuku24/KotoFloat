@@ -48,7 +48,7 @@ struct ClipboardCaptureTests {
         write("  Existing\nclipboard  ", to: board)
         let clipboard = SystemClipboard(board)
         let original = try clipboard.snapshot()
-        #expect(try clipboard.readStableText() == "  Existing\nclipboard  ")
+        #expect(try clipboard.readStableText()?.text == "  Existing\nclipboard  ")
         #expect(clipboard.generation == original.generation)
         #expect(try clipboard.snapshot().items == original.items)
         board.clearContents()
@@ -61,6 +61,117 @@ struct ClipboardCaptureTests {
     @Test func clipboardFallbackRejectsAConcurrentClipboardWrite() {
         let clipboard = ChangingClipboard()
         #expect(throws: CaptureFailure.clipboardChanged) { try clipboard.readStableText() }
+    }
+
+    @Test func blockedAccessSkipsReadingExistingClipboardAndSendingCopy() async {
+        let clipboard = ChangingClipboard()
+        clipboard.canReadWithoutPrompt = false
+        let session = CopySessionStub()
+        let capture = ClipboardCapture(clipboard: clipboard, wait: { _ in })
+
+        #expect(throws: CaptureFailure.clipboardReadNotAllowed) { try clipboard.readStableText() }
+        await #expect(throws: CaptureFailure.clipboardReadNotAllowed) { try await capture.capture(session: session) }
+        #expect(clipboard.snapshots == 0)
+        #expect(clipboard.reads == 0)
+        #expect(session.sends == 0)
+        #expect(session.finished)
+    }
+
+    @Test func accessRevokedWhileWaitingForModifiersStopsCopy() async {
+        let clipboard = ChangingClipboard()
+        let session = CopySessionStub()
+        session.modifiersReleased = false
+        let capture = ClipboardCapture(clipboard: clipboard, wait: { _ in
+            clipboard.canReadWithoutPrompt = false
+            session.modifiersReleased = true
+        })
+
+        await #expect(throws: CaptureFailure.clipboardReadNotAllowed) { try await capture.capture(session: session) }
+        #expect(clipboard.reads == 0)
+        #expect(session.sends == 0)
+    }
+
+    @Test func accessRevokedAfterCopySkipsReadingAndRestoresOriginalSnapshot() async {
+        let clipboard = ChangingClipboard()
+        let session = CopySessionStub()
+        session.onSend = {
+            clipboard.generation += 1
+            clipboard.canReadWithoutPrompt = false
+            return true
+        }
+        let capture = ClipboardCapture(clipboard: clipboard, wait: { _ in })
+
+        await #expect(throws: CaptureFailure.clipboardReadNotAllowed) { try await capture.capture(session: session) }
+        #expect(clipboard.reads == 0)
+        #expect(clipboard.restoredSnapshot?.generation == 0)
+    }
+
+    @Test func existingTextHasUnknownAgeAndObservedCopiesExpireWithoutBeingRead() throws {
+        let board = board()
+        defer { board.releaseGlobally() }
+        write("Before launch", to: board)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let clipboard = SystemClipboard(board, now: { now })
+        #expect(try clipboard.readStableText()?.age == nil)
+        now = Date(timeIntervalSince1970: 1_010)
+        _ = clipboard.generation
+        write("New copy", to: board)
+        now = Date(timeIntervalSince1970: 1_010.5)
+        _ = clipboard.generation
+        now = Date(timeIntervalSince1970: 1_310)
+        let recentValue = try clipboard.readStableText()
+        let recent = try #require(recentValue)
+        #expect(recent.text == "New copy")
+        #expect(recent.age == 300)
+        now = Date(timeIntervalSince1970: 1_311)
+        #expect(try clipboard.readStableText()?.age == 301)
+        write("New copy", to: board)
+        #expect(try clipboard.readStableText()?.age == 0)
+    }
+
+    @Test func delayedObservationDoesNotTreatAnOldCopyAsNew() throws {
+        let board = board()
+        defer { board.releaseGlobally() }
+        var now = Date(timeIntervalSince1970: 1_000)
+        let clipboard = SystemClipboard(board, now: { now })
+        write("Copied while observation was suspended", to: board)
+        now = Date(timeIntervalSince1970: 1_601)
+        #expect(try clipboard.readStableText()?.age == 601)
+    }
+
+    @Test func clockMovingBackwardsCannotMakeAnOldClipboardRecent() throws {
+        let board = board()
+        defer { board.releaseGlobally() }
+        var now = Date(timeIntervalSince1970: 1_000)
+        let clipboard = SystemClipboard(board, now: { now })
+        write("Old copy", to: board)
+        _ = clipboard.generation
+        now = Date(timeIntervalSince1970: 1_400)
+        #expect(try clipboard.readStableText()?.age == 400)
+        now = Date(timeIntervalSince1970: 1_200)
+        #expect(try clipboard.readStableText()?.age == nil)
+    }
+
+    @Test(arguments: [false, true])
+    func selectionCopyRestorationPreservesOriginalClipboardAge(_ knownAge: Bool) async throws {
+        let board = board()
+        defer { board.releaseGlobally() }
+        write("Original clipboard", to: board)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let clipboard = SystemClipboard(board, now: { now })
+        if knownAge {
+            write("Original clipboard", to: board)
+            _ = clipboard.generation
+        }
+        now = Date(timeIntervalSince1970: 1_601)
+        let session = CopySessionStub()
+        session.onSend = { write("Selected text", to: board); return true }
+        let capture = ClipboardCapture(clipboard: clipboard, wait: { _ in })
+        #expect(try await capture.capture(session: session) == "Selected text")
+        let restoredValue = try clipboard.readStableText()
+        let restored = try #require(restoredValue)
+        #expect(restored.text == "Original clipboard")
+        #expect(restored.age == (knownAge ? 601 : nil))
     }
 
     @Test func unchangedClipboardIsNeverUsedAsSelection() async {
@@ -193,11 +304,22 @@ struct ClipboardCaptureTests {
 }
 
 @MainActor private final class ChangingClipboard: ClipboardAccess {
+    var canReadWithoutPrompt = true
     var generation = 0
-    func snapshot() throws -> ClipboardSnapshot { ClipboardSnapshot(generation: generation, items: []) }
+    var snapshots = 0
+    var reads = 0
+    var restoredSnapshot: ClipboardSnapshot?
+    func snapshot() throws -> ClipboardSnapshot {
+        snapshots += 1
+        return ClipboardSnapshot(generation: generation, items: [])
+    }
     func text() -> String? {
+        reads += 1
         generation += 1
         return "Text from an obsolete generation"
     }
-    func restore(_ snapshot: ClipboardSnapshot, ifUnchangedSince generation: Int) {}
+    func restore(_ snapshot: ClipboardSnapshot, ifUnchangedSince generation: Int) {
+        guard self.generation == generation else { return }
+        restoredSnapshot = snapshot
+    }
 }

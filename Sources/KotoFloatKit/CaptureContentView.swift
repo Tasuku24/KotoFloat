@@ -49,6 +49,14 @@ struct CaptureContentView: View {
             if case .captured = model.state, let translation {
                 PopupTranslationStatusView(model: translation, openSettings: openSettings) { showsDetails = true }
                     .reportPopupHeight()
+                if translation.canFixLineBreaks {
+                    FixSourceLineBreaksButton(model: translation)
+                        .controlSize(.small)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16).padding(.vertical, 8)
+                        .reportPopupHeight()
+                    Divider().reportPopupHeight()
+                }
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
@@ -60,12 +68,6 @@ struct CaptureContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .accessibilityIdentifier("captureScrollView")
             .id(translation?.documentID)
-            if let translation, translation.pendingAction != nil {
-                Divider().reportPopupHeight()
-                TranslationConfirmationView(model: translation)
-                    .padding(12)
-                    .reportPopupHeight()
-            }
         }
         .background(.background)
         .ignoresSafeArea(.container, edges: .top)
@@ -102,8 +104,9 @@ struct CaptureContentView: View {
             } else { sourceText(text) }
         case .needsConfirmation(let text):
             sourceText(text)
-            Text(L10n.text("capture.confirmHint")).font(.callout)
-            Button(L10n.text("capture.confirm")) { model.confirmCopy() }
+            Text(L10n.text(text.clipboardAge == nil ? "capture.clipboardUnknownHint" : "capture.clipboardOldHint"))
+                .font(.callout)
+            Button(L10n.text("capture.confirmClipboard")) { model.confirmCopy() }
                 .buttonStyle(.borderedProminent)
         case .failed(let failure):
             Label(L10n.text("capture.failed"), systemImage: "exclamationmark.circle")

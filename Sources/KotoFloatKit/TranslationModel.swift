@@ -6,33 +6,20 @@ import Observation
     private(set) var state = State.idle
     private(set) var output = ""
     private(set) var input: TranslationInput?
-    private(set) var sourceText = ""
+    private(set) var sourceText = "" {
+        didSet {
+            reflowedSource = SourceLineBreaks.reflow(sourceText).flatMap { Self.isTranslatable($0) ? $0 : nil }
+        }
+    }
+    private var reflowedSource: String?
     private(set) var editedOutput: String?
     private(set) var revision = 0
     private(set) var documentID = UUID()
-    private(set) var pendingAction: PendingAction?
     @ObservationIgnored let undoManager = UndoManager()
-    @ObservationIgnored private var pendingRevision = 0
-    @ObservationIgnored private var pendingDirection: [TranslationLanguage] = []
-    @ObservationIgnored private var pendingSettingsRevision = 0
-    @ObservationIgnored private var pendingGlossaryRevision = 0
-
-    enum PendingAction {
-        case translate(CapturedText), clear, swap, restore(TranslationHistoryEntry)
-        var messageKey: String {
-            switch self {
-            case .translate: "editor.confirm.replace"
-            case .clear: "editor.confirm.clear"
-            case .swap: "editor.confirm.swap"
-            case .restore: "history.confirmRestore"
-            }
-        }
-    }
     let preferences: TranslationPreferences
     let glossaries: GlossaryStore?
     let history: TranslationHistoryStore?
     @ObservationIgnored private var historyIdentity: (id: UUID, createdAt: Date)?
-    @ObservationIgnored private var pendingContinuesHistory = false
     @ObservationIgnored private let credentials: any CredentialStore
     @ObservationIgnored private let clientFactory: @MainActor (ServerConfiguration, String?) -> any TranslationServing
     @ObservationIgnored private var task: Task<Void, Never>?
@@ -42,6 +29,7 @@ import Observation
     @ObservationIgnored private var configuration: ServerConfiguration?
     @ObservationIgnored private var configurationRevision = 0
     @ObservationIgnored lazy var review = TranslationReviewModel(document: self)
+    @ObservationIgnored lazy var backTranslation = BackTranslationModel(document: self)
     private var glossaryRevision = 0
 
     init(preferences: TranslationPreferences, credentials: any CredentialStore, glossaries: GlossaryStore? = nil,
@@ -71,9 +59,8 @@ import Observation
     var hasUnsentWork: Bool {
         hasEdits || sourceChanged || (!sourceText.isEmpty && state != .completed && state != .running)
     }
-    var canTranslate: Bool {
-        !sourceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && sourceText.utf8.count <= 131_072
-    }
+    var canTranslate: Bool { Self.isTranslatable(sourceText) }
+    var canFixLineBreaks: Bool { reflowedSource != nil }
     var canCopy: Bool { state == .completed && !resultText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     var canSwapLanguages: Bool {
         canCopy && !sourceChanged && !directionChanged && preferences.sourceLanguage != .automatic &&
@@ -86,7 +73,7 @@ import Observation
     var canRedo: Bool { _ = revision; return undoManager.canRedo }
 
     var canReview: Bool {
-        state == .completed && pendingAction == nil && !sourceChanged && !directionChanged && !glossaryChanged &&
+        state == .completed && !sourceChanged && !directionChanged && !glossaryChanged &&
             configuration == preferences.server && configurationRevision == preferences.revision &&
             !sourceText.isEmpty && !resultText.isEmpty && glossaries?.failure == nil
     }
@@ -106,7 +93,7 @@ import Observation
             sourceText = text
             didEdit()
         }
-        guard !isComposing, canTranslate, !hasEdits, pendingAction == nil,
+        guard !isComposing, canTranslate, !hasEdits,
               sourceChanged || state != .completed else { return }
         let revision = revision
         let settingsRevision = preferences.revision
@@ -119,7 +106,7 @@ import Observation
             guard let self, !Task.isCancelled, self.revision == revision,
                   preferences.revision == settingsRevision, (glossaries?.revision ?? 0) == glossaryRevision,
                   preferences.sourceLanguage == sourceLanguage, preferences.targetLanguage == targetLanguage,
-                  pendingAction == nil, !hasEdits else { return }
+                  !hasEdits else { return }
             automaticTranslationTask = nil
             translateSource()
         }
@@ -151,8 +138,8 @@ import Observation
     private func didEdit() {
         cancelAutomaticTranslation()
         review.invalidate()
+        backTranslation.invalidate()
         revision += 1
-        pendingAction = nil
     }
 
     @discardableResult func copyResult(to pasteboard: NSPasteboard) -> Bool {
@@ -162,10 +149,22 @@ import Observation
     }
 
     func translateSource() {
-        guard canTranslate else { return }
-        let text = CapturedText(text: sourceText, source: capturedText?.source, bounds: nil, method: .manual)
-        if hasEdits { requestConfirmation(.translate(text), continuingHistory: true) }
-        else { beginTranslation(text: text, force: true, continuingHistory: true) }
+        translateSource(sourceText)
+    }
+
+    func fixLineBreaksAndTranslate() {
+        guard let reflowedSource else { return }
+        translateSource(reflowedSource)
+    }
+
+    private static func isTranslatable(_ text: String) -> Bool {
+        text.utf8.count <= 131_072 && !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func translateSource(_ source: String) {
+        guard Self.isTranslatable(source) else { return }
+        let text = CapturedText(text: source, source: capturedText?.source, bounds: nil, method: .manual)
+        beginTranslation(text: text, force: true, continuingHistory: true)
     }
 
     // Explicit popup choices update and translate together; preference edits elsewhere do not send.
@@ -182,52 +181,22 @@ import Observation
     }
 
     func start(text: CapturedText, force: Bool = false) {
-        if hasUnsentWork { requestConfirmation(.translate(text)); return }
         beginTranslation(text: text, force: force)
     }
 
     func clearDocument() {
         guard !sourceText.isEmpty || !output.isEmpty else { return }
-        requestConfirmation(.clear)
+        cancel(clear: true)
     }
 
     func swapLanguages() {
         guard canSwapLanguages else { return }
-        requestConfirmation(.swap)
-    }
-
-    func keepEditing() { pendingAction = nil }
-
-    private func requestConfirmation(_ action: PendingAction, continuingHistory: Bool = false) {
-        cancelAutomaticTranslation()
-        pendingAction = action
-        pendingContinuesHistory = continuingHistory
-        pendingRevision = revision
-        pendingDirection = [preferences.sourceLanguage, preferences.targetLanguage]
-        pendingSettingsRevision = preferences.revision
-        pendingGlossaryRevision = glossaries?.revision ?? 0
-    }
-
-    func confirmPendingAction() {
-        guard let action = pendingAction else { return }
-        pendingAction = nil
-        guard pendingRevision == revision,
-              pendingDirection == [preferences.sourceLanguage, preferences.targetLanguage],
-              pendingSettingsRevision == preferences.revision,
-              pendingGlossaryRevision == (glossaries?.revision ?? 0) else { return }
-        switch action {
-        case .translate(let text): beginTranslation(text: text, force: true, continuingHistory: pendingContinuesHistory)
-        case .clear: cancel(clear: true)
-        case .swap:
-            guard canSwapLanguages else { return }
-            let text = resultText
-            let oldSource = preferences.sourceLanguage
-            preferences.sourceLanguage = preferences.targetLanguage
-            preferences.targetLanguage = oldSource
-            cancel(clear: true)
-            sourceText = text
-        case .restore(let entry): applyHistory(entry)
-        }
+        let text = resultText
+        let oldSource = preferences.sourceLanguage
+        preferences.sourceLanguage = preferences.targetLanguage
+        preferences.targetLanguage = oldSource
+        cancel(clear: true)
+        sourceText = text
     }
 
     private func beginTranslation(text: CapturedText, force: Bool, continuingHistory: Bool = false) {
@@ -243,7 +212,7 @@ import Observation
         input = next
         glossaryRevision = glossaries?.revision ?? 0
         guard glossaries?.failure == nil else { state = .failed(.glossaryUnavailable); return }
-        guard !text.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, text.text.utf8.count <= 131_072 else { state = .failed(.requestRejected); return }
+        guard Self.isTranslatable(text.text) else { state = .failed(.requestRejected); return }
         let glossary = glossaries?.activeGlossary
         guard let server = preferences.server else { state = .needsConfiguration; return }
         configuration = server
@@ -295,11 +264,6 @@ import Observation
 
     func restoreHistory(_ entry: TranslationHistoryEntry) {
         guard (try? entry.validated()) != nil else { return }
-        if hasUnsentWork || state == .running { requestConfirmation(.restore(entry)) }
-        else { applyHistory(entry) }
-    }
-
-    private func applyHistory(_ entry: TranslationHistoryEntry) {
         cancel(clear: true)
         preferences.sourceLanguage = entry.sourceLanguage
         preferences.targetLanguage = entry.targetLanguage
@@ -316,6 +280,7 @@ import Observation
     func cancel(clear: Bool = false) {
         cancelAutomaticTranslation()
         review.invalidate()
+        backTranslation.invalidate()
         requestID = UUID()
         task?.cancel()
         task = nil
@@ -327,7 +292,6 @@ import Observation
             sourceText = ""
             editedOutput = nil
             historyIdentity = nil
-            pendingAction = nil
             documentID = UUID()
             revision += 1
             undoManager.removeAllActions()

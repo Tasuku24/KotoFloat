@@ -117,6 +117,15 @@ struct TranslationStatusView: View {
     }
 }
 
+struct FixSourceLineBreaksButton: View {
+    let model: TranslationModel
+
+    var body: some View {
+        Button(L10n.text("translation.fixLineBreaks"), action: model.fixLineBreaksAndTranslate)
+            .buttonStyle(.bordered)
+    }
+}
+
 struct TranslationActionsView: View {
     let model: TranslationModel
     @State private var copied = false
@@ -137,26 +146,5 @@ struct TranslationActionsView: View {
         .controlSize(.small)
         .onChange(of: model.state) { copied = false }
         .onChange(of: model.revision) { copied = false }
-    }
-}
-
-struct TranslationConfirmationView: View {
-    let model: TranslationModel
-    var body: some View {
-        if let action = model.pendingAction {
-            VStack(alignment: .leading, spacing: 8) {
-                Label(L10n.text(action.messageKey), systemImage: "exclamationmark.triangle")
-                    .font(.callout).fixedSize(horizontal: false, vertical: true)
-                if case .translate(let text) = action {
-                    Text(String(text.text.prefix(160))).font(.caption).lineLimit(3).textSelection(.enabled)
-                }
-                HStack {
-                    Button(L10n.text("editor.keepEditing")) { model.keepEditing() }
-                    Button(L10n.text("editor.discardContinue"), role: .destructive) { model.confirmPendingAction() }
-                }.controlSize(.small)
-            }
-            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
-            .background(.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
-        }
     }
 }

@@ -23,18 +23,13 @@ import Testing
         }
     }
 
-    @Test func retranslationRequiresConfirmationAndResetsUndoForNewGeneration() async throws {
+    @Test func retranslationStartsImmediatelyAndResetsUndoForNewGeneration() async throws {
         try await withEditor { model, service in
             await complete(model, service)
             model.editTranslation("Keep this")
             model.retranslate()
-            #expect(model.pendingAction != nil)
-            #expect(model.resultText == "Keep this")
-            #expect(await service.count == 1)
-            model.keepEditing()
-            #expect(model.pendingAction == nil)
-            model.retranslate()
-            model.confirmPendingAction()
+            #expect(model.state == .running)
+            #expect(model.resultText.isEmpty)
             await waitFor { await service.count == 2 }
             #expect(!model.undoManager.canUndo)
             await service.emit("Second generation", at: 1)
@@ -46,26 +41,19 @@ import Testing
         }
     }
 
-    @Test func captureCannotOverwriteEditedOrUntranslatedDrafts() async throws {
+    @Test func captureImmediatelyReplacesEditedOrUntranslatedDrafts() async throws {
         try await withEditor { model, service in
             await complete(model, service)
             model.editTranslation("My wording")
             model.start(text: captured("New selection"))
-            #expect(model.sourceText == "Source")
-            #expect(model.resultText == "My wording")
-            #expect(await service.count == 1)
-            model.editTranslation("Newer wording")
-            model.confirmPendingAction()
-            #expect(model.resultText == "Newer wording")
-            #expect(await service.count == 1)
-            model.start(text: captured("New selection"))
-            model.confirmPendingAction()
-            await waitFor { await service.count == 2 }
             #expect(model.sourceText == "New selection")
+            #expect(!model.hasEdits)
+            await waitFor { await service.count == 2 }
             model.editSource("Untranslated draft")
             model.start(text: captured("Another selection"))
-            #expect(model.sourceText == "Untranslated draft")
-            #expect(model.pendingAction != nil)
+            #expect(model.sourceText == "Another selection")
+            await waitFor { await service.count == 3 }
+            #expect(await service.inputs.map(\.text) == ["Source", "New selection", "Another selection"])
         }
     }
 
@@ -92,16 +80,10 @@ import Testing
         }
     }
 
-    @Test func clearRequiresConfirmationAndStaleSettingsCannotApproveDiscard() async throws {
+    @Test func clearImmediatelyDiscardsDraftAndResetsUndo() async throws {
         try await withEditor { model, service in
             model.editSource("Draft")
             model.clearDocument()
-            #expect(model.sourceText == "Draft")
-            model.preferences.targetLanguage = .english
-            model.confirmPendingAction()
-            #expect(model.sourceText == "Draft")
-            model.clearDocument()
-            model.confirmPendingAction()
             #expect(model.sourceText.isEmpty)
             #expect(model.output.isEmpty)
             #expect(model.state == .idle)
@@ -125,8 +107,6 @@ import Testing
             model.editTranslation("編集した訳")
             #expect(model.canSwapLanguages)
             model.swapLanguages()
-            #expect(model.sourceText == "Source")
-            model.confirmPendingAction()
             #expect(model.sourceText == "編集した訳")
             #expect(model.preferences.sourceLanguage == .japanese)
             #expect(model.preferences.targetLanguage == .english)
@@ -167,15 +147,16 @@ import Testing
             capture.beginManualEntry()
             #expect(model.resultText == "Keep me")
             let environment = CaptureEnvironmentStub()
-            environment.selection = .unavailable
+            environment.selection = .empty
+            environment.clipboardText = "Old clipboard text"
+            environment.clipboardAge = 600
             capture.start(using: SelectionCapture(environment: environment), completion: {})
             await waitFor { if case .needsConfirmation = capture.state { return true }; return false }
             #expect(model.resultText == "Keep me")
-            #expect(model.pendingAction == nil)
             #expect(await service.count == 1)
             capture.confirmCopy()
-            #expect(model.pendingAction != nil)
-            #expect(await service.count == 1)
+            #expect(model.sourceText == "Old clipboard text")
+            await waitFor { await service.count == 2 }
         }
     }
 
@@ -214,7 +195,7 @@ import Testing
     }
 
     @Test(arguments: ["configuration", "credentials", "glossary"])
-    func preflightFailureKeepsSourceProtected(_ failure: String) throws {
+    func preflightFailureKeepsSourceAvailable(_ failure: String) throws {
         try withTranslationDefaults { defaults in
             let preferences = TranslationPreferences(defaults: defaults)
             let credentials = MemoryCredentials()
@@ -239,11 +220,7 @@ import Testing
                 .failed(failure == "credentials" ? .credentialsUnavailable : .glossaryUnavailable)
             #expect(model.state == expected)
             #expect(model.hasUnsentWork)
-            model.start(text: captured("New selection"))
             #expect(model.sourceText == "Original manual draft")
-            #expect(model.pendingAction != nil)
-            model.keepEditing()
-            #expect(model.hasUnsentWork)
         }
     }
 

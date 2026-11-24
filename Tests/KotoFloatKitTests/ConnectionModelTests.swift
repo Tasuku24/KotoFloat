@@ -3,6 +3,71 @@ import Testing
 @testable import KotoFloatKit
 
 @MainActor struct ConnectionModelTests {
+    @Test func savedTokenRemainsAvailableAfterClearingInputAndReloadingSettings() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            var requestedToken: String?
+            let model = ConnectionModel(preferences: preferences, credentials: credentials)
+            #expect(model.savedTokenStatus == .notSaved)
+            model.tokenInput = "fixture-token"
+            model.save()
+            #expect(model.status == .saved)
+            #expect(model.tokenInput.isEmpty)
+            #expect(model.savedTokenStatus == .saved)
+
+            let restored = ConnectionModel(preferences: preferences, credentials: credentials, clientFactory: { _, token in
+                requestedToken = token
+                return service
+            })
+            #expect(restored.tokenInput.isEmpty)
+            #expect(restored.savedTokenStatus == .saved)
+            restored.checkConnection()
+            await waitFor { restored.status == .connected(1) }
+            #expect(requestedToken == "fixture-token")
+            restored.save()
+            let keptToken = try credentials.token(for: "https://fixture.invalid/v1")
+            #expect(keptToken == "fixture-token")
+
+            restored.removeSavedToken = true
+            restored.save()
+            #expect(restored.savedTokenStatus == .notSaved)
+            let removedToken = try credentials.token(for: "https://fixture.invalid/v1")
+            #expect(removedToken == nil)
+        }
+    }
+
+    @Test func savedTokenStatusFollowsNormalizedEndpointWithoutExposingToken() throws {
+        try withTranslationDefaults { defaults in
+            let credentials = MemoryCredentials()
+            try credentials.setToken("fixture-token", for: "https://a.test/v1")
+            let model = ConnectionModel(preferences: TranslationPreferences(defaults: defaults), credentials: credentials)
+            model.endpoint = " https://A.test/ "
+            #expect(model.savedTokenStatus == .saved)
+            #expect(model.tokenInput.isEmpty)
+            model.endpoint = "https://b.test"
+            #expect(model.savedTokenStatus == .notSaved)
+            model.endpoint = "invalid"
+            #expect(model.savedTokenStatus == .notSaved)
+        }
+    }
+
+    @Test func unreadableSavedTokenIsDistinguishedFromMissingToken() throws {
+        try withTranslationDefaults { defaults in
+            let credentials = MemoryCredentials()
+            credentials.shouldFail = true
+            let model = ConnectionModel(preferences: TranslationPreferences(defaults: defaults), credentials: credentials)
+            model.endpoint = "https://a.test"
+            #expect(model.savedTokenStatus == .unavailable)
+            model.tokenInput = "fixture-token"
+            model.save()
+            #expect(model.status == .failed(.credentialsUnavailable))
+            #expect(model.tokenInput == "fixture-token")
+            credentials.shouldFail = false
+            model.save()
+            #expect(model.savedTokenStatus == .saved)
+        }
+    }
+
     @Test func endpointChangeNeverSendsOrSavesPreviousDraftToken() async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()

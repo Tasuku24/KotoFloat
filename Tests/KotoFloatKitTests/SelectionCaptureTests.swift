@@ -8,9 +8,9 @@ final class CaptureEnvironmentStub: CaptureEnvironment {
     var source: SourceApplication? = SourceApplication(processIdentifier: 42, bundleIdentifier: "test.source", name: "Fixture")
     var selection: SelectionRead = .selected("  selected\ntext  ", nil)
     var copyText = "copied selection"
-    var formattedSelection: String?
     var copies = 0
     var clipboardText: String?
+    var clipboardAge: TimeInterval?
     var clipboardReads = 0
     var clipboardAction: (() throws -> String?)?
     var onRead: (() -> Void)?
@@ -24,13 +24,12 @@ final class CaptureEnvironmentStub: CaptureEnvironment {
     func copySelection(from source: SourceApplication) async throws -> String {
         copies += 1
         if let copyAction { return try await copyAction() }
-        if case .selected(let selected, _) = selection { return formattedSelection ?? selected }
         return copyText
     }
-    func readClipboardText() throws -> String? {
+    func readClipboardText() throws -> ClipboardText? {
         clipboardReads += 1
-        if let clipboardAction { return try clipboardAction() }
-        return clipboardText
+        let text = try clipboardAction?() ?? clipboardText
+        return text.map { ClipboardText(text: $0, age: clipboardAge) }
     }
 }
 
@@ -43,7 +42,7 @@ struct SelectionCaptureTests {
         #expect(result.text == "  selected\ntext  ")
         #expect(result.source == env.source)
         #expect(result.method == .accessibility)
-        #expect(env.copies == 1)
+        #expect(env.copies == 0)
         #expect(env.clipboardReads == 0)
     }
 
@@ -58,7 +57,7 @@ struct SelectionCaptureTests {
         #expect(env.clipboardReads == 0)
     }
 
-    @Test func nativeCopyRestoresParagraphsFlattenedByAccessibilityAndTranslatesAutomatically() async throws {
+    @Test func directSelectionTranslatesWithoutReadingClipboard() async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let translation = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -66,12 +65,16 @@ struct SelectionCaptureTests {
             let capture = CaptureModel()
             translation.bind(to: capture)
             let env = CaptureEnvironmentStub()
-            env.selection = .selected("Heading• First item• Second itemClosing paragraph.", nil)
             let original = "Heading\n\n• First item\n• Second item\n\nClosing paragraph."
-            env.formattedSelection = original
+            let bounds = CGRect(x: 20, y: 40, width: 120, height: 60)
+            env.selection = .selected(original, bounds)
+            env.copyText = "A whole document instead of the selected words"
+            env.clipboardText = "Earlier clipboard text"
             capture.start(using: SelectionCapture(environment: env), completion: {})
             await waitFor { await service.count == 1 }
-            #expect(capture.state == .captured(CapturedText(text: original, source: env.source, bounds: nil, method: .verifiedCopy)))
+            #expect(capture.state == .captured(CapturedText(text: original, source: env.source, bounds: bounds, method: .accessibility)))
+            #expect(env.copies == 0)
+            #expect(env.clipboardReads == 0)
             #expect(translation.sourceText == original)
             #expect(await service.inputs.last?.text == original)
             await service.emit("見出し\n\n• 最初の項目\n• 次の項目\n\n最後の段落。", at: 0)
@@ -81,33 +84,20 @@ struct SelectionCaptureTests {
         }
     }
 
-    @Test func aDifferentCopiedSelectionStillRequiresConfirmation() async {
+    @Test(arguments: [SelectionRead.empty, .unavailable])
+    func blockedClipboardFallsBackToManualInput(_ selection: SelectionRead) async {
         let env = CaptureEnvironmentStub()
-        env.selection = .selected("Selected words", nil)
-        env.formattedSelection = "A whole document instead of the selected words"
+        env.selection = selection
+        env.clipboardAction = { throw CaptureFailure.clipboardReadNotAllowed }
+        env.copyAction = { throw CaptureFailure.clipboardReadNotAllowed }
         let model = CaptureModel()
         model.start(using: SelectionCapture(environment: env), completion: {})
-        await waitFor { if case .needsConfirmation = model.state { return true }; return false }
-        #expect(model.state == .needsConfirmation(CapturedText(text: env.formattedSelection!, source: env.source,
-                                                              bounds: nil, method: .copy)))
-    }
-
-    @Test(arguments: [CaptureFailure.copyFailed, .timedOut, .clipboardUnavailable])
-    func failedFormattingCopyKeepsKnownSelection(_ failure: CaptureFailure) async throws {
-        let env = CaptureEnvironmentStub()
-        env.copyAction = { throw failure }
-        let result = try await SelectionCapture(environment: env).capture()
-        #expect(result.text == "  selected\ntext  ")
-        #expect(result.method == .accessibility)
-        #expect(env.clipboardReads == 0)
-    }
-
-    @Test(arguments: [CaptureFailure.sourceChanged, .inputChanged, .clipboardChanged])
-    func interruptedFormattingCopyCannotUseTheOldSelection(_ failure: CaptureFailure) async {
-        let env = CaptureEnvironmentStub()
-        env.copyAction = { throw failure }
-        await #expect(throws: failure) { try await SelectionCapture(environment: env).capture() }
-        #expect(env.clipboardReads == 0)
+        await waitFor { model.state != .capturing }
+        #expect(model.state == .failed(.clipboardReadNotAllowed))
+        model.beginManualEntry()
+        model.manualText = "Pasted text"
+        model.acceptManualText()
+        #expect(model.state == .captured(CapturedText(text: "Pasted text", source: nil, bounds: nil, method: .manual)))
     }
 
     @Test func missingSourceIsExplained() async {
@@ -188,7 +178,30 @@ struct SelectionCaptureTests {
         await #expect(throws: CaptureFailure.sourceChanged) { try await SelectionCapture(environment: env).capture() }
     }
 
-    @Test func clipboardFallbackAutomaticallyStartsTranslation() async throws {
+    @Test func clipboardWithUnknownCopyTimeWaitsForConfirmationBeforeTranslation() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let translation = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { translation.cancel() }
+            let capture = CaptureModel()
+            translation.bind(to: capture)
+            let env = CaptureEnvironmentStub()
+            env.selection = .empty
+            env.clipboardText = "Clipboard with unknown age"
+            capture.start(using: SelectionCapture(environment: env), completion: {})
+            await waitFor { capture.state != .capturing }
+            #expect(capture.state == .needsConfirmation(CapturedText(text: "Clipboard with unknown age", source: nil,
+                                                                   bounds: nil, method: .clipboard)))
+            #expect(translation.state != .running)
+            #expect(await service.count == 0)
+            capture.confirmCopy()
+            await waitFor { await service.count == 1 }
+            #expect(translation.sourceText == "Clipboard with unknown age")
+        }
+    }
+
+    @Test(arguments: [0.0, 299.0, 300.0])
+    func recentClipboardFallbackAutomaticallyStartsTranslation(_ age: TimeInterval) async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let translation = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -198,16 +211,40 @@ struct SelectionCaptureTests {
             let env = CaptureEnvironmentStub()
             env.selection = .empty
             env.clipboardText = "Translate this clipboard text"
+            env.clipboardAge = age
             capture.start(using: SelectionCapture(environment: env), completion: {})
             await waitFor { await service.count == 1 }
             #expect(capture.state == .captured(CapturedText(text: "Translate this clipboard text", source: nil,
-                                                          bounds: nil, method: .clipboard)))
-            #expect(translation.pendingAction == nil)
+                                                          bounds: nil, method: .clipboard, clipboardAge: age)))
             #expect(await service.inputs.last?.text == env.clipboardText)
             await service.emit("Translated clipboard", at: 0)
             await service.finish(at: 0)
             await waitFor { translation.state == .completed }
             #expect(translation.resultText == "Translated clipboard")
+        }
+    }
+
+    @Test(arguments: [300.001, 600.0, -1.0])
+    func olderOrInvalidClipboardAgeWaitsBeforeSendingText(_ age: TimeInterval) async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let translation = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { translation.cancel() }
+            let capture = CaptureModel()
+            translation.bind(to: capture)
+            let env = CaptureEnvironmentStub()
+            env.selection = .unavailable
+            env.copyAction = { throw CaptureFailure.timedOut }
+            env.clipboardText = "Older clipboard text"
+            env.clipboardAge = age
+            capture.start(using: SelectionCapture(environment: env), completion: {})
+            await waitFor { capture.state != .capturing }
+            #expect(capture.state == .needsConfirmation(CapturedText(text: "Older clipboard text", source: nil,
+                                                                   bounds: nil, method: .clipboard, clipboardAge: age)))
+            #expect(await service.count == 0)
+            capture.confirmCopy()
+            await waitFor { await service.count == 1 }
+            #expect(translation.sourceText == "Older clipboard text")
         }
     }
 
@@ -224,17 +261,25 @@ struct SelectionCaptureTests {
         await #expect(throws: CaptureFailure.sourceChanged) { try await SelectionCapture(environment: env).capture() }
     }
 
-    @Test func copiedTextNeedsExplicitConfirmation() async {
-        let env = CaptureEnvironmentStub()
-        env.selection = .unavailable
-        let model = CaptureModel()
-        model.start(using: SelectionCapture(environment: env), completion: {})
-        for _ in 0..<10 { await Task.yield() }
-        guard case .needsConfirmation(let text) = model.state else {
-            Issue.record("Copied text must be unconfirmed"); return
+    @Test func unavailableSelectionCopyStartsTranslationWithoutConfirmation() async throws {
+        try await withTranslationContext { preferences, credentials in
+            let service = ControlledTranslator()
+            let translation = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
+            defer { translation.cancel() }
+            let capture = CaptureModel()
+            translation.bind(to: capture)
+            let env = CaptureEnvironmentStub()
+            env.selection = .unavailable
+            capture.start(using: SelectionCapture(environment: env), completion: {})
+            await waitFor { capture.state != .capturing }
+            #expect(capture.state == .captured(CapturedText(text: "copied selection", source: env.source,
+                                                          bounds: nil, method: .copy)))
+            #expect(translation.state == .running)
+            if case .captured = capture.state {
+                await waitFor { await service.count == 1 }
+                #expect(await service.inputs.last?.text == "copied selection")
+            }
         }
-        model.confirmCopy()
-        #expect(model.state == .captured(text))
     }
 
     @Test func manualInputCannotAcceptWhitespace() {

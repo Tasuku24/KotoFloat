@@ -46,27 +46,33 @@ import Testing
         }
     }
 
-    @Test func reopeningIsLocalAndRequiresConfirmationBeforeDiscardingADraft() async throws {
+    @Test(arguments: [false, true])
+    func reopeningImmediatelyReplacesTheCurrentDocumentWithoutSending(wasTranslating: Bool) async throws {
         try await withHistory { model, service, history in
             model.start(text: capture("Saved source"))
             await finish(model, service, at: 0, text: "Saved result")
             await history.search("")
             let id = try #require(history.entries.first?.id)
             let entry = try #require(await history.entry(id: id))
-            model.editSource("Keep my pending draft")
+            if wasTranslating {
+                model.start(text: capture("In-flight source"))
+                await waitFor { await service.count == 2 }
+            } else {
+                model.editSource("Pending draft")
+            }
             model.restoreHistory(entry)
-            #expect(model.pendingAction != nil)
-            #expect(model.sourceText == "Keep my pending draft")
-            try await Task.sleep(for: .milliseconds(1100))
-            #expect(await service.count == 1)
-            model.confirmPendingAction()
             #expect(model.sourceText == "Saved source")
             #expect(model.resultText == "Saved result")
             #expect(model.state == .completed)
             #expect(!model.hasEdits)
             #expect(!model.canUndo)
+            if wasTranslating {
+                await service.emit("Obsolete result", at: 1)
+                await service.finish(at: 1)
+            }
             try await Task.sleep(for: .milliseconds(1100))
-            #expect(await service.count == 1)
+            #expect(model.resultText == "Saved result")
+            #expect(await service.count == (wasTranslating ? 2 : 1))
         }
     }
 
@@ -80,7 +86,6 @@ import Testing
             model.editTranslation("Edited after deletion")
             await history.flush()
             model.translateSource()
-            model.confirmPendingAction()
             await finish(model, service, at: 1, text: "Retranslated after deletion")
             await history.search("")
             #expect(history.entries.isEmpty)

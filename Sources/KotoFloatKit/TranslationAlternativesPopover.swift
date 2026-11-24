@@ -9,6 +9,13 @@ import AppKit
         let phase: TranslationReviewModel.Phase
         let word: String
         let alternatives: [String]
+        var canRetry: Bool {
+            switch phase {
+            case .failed, .unmatched: true
+            case .ready: alternatives.isEmpty
+            default: false
+            }
+        }
     }
 
     override init() {
@@ -72,6 +79,11 @@ import AppKit
                 views.append(button)
             }
         }
+        if presentation.canRetry {
+            let retry = NSButton(title: L10n.text("review.retry"), target: self, action: #selector(retry(_:)))
+            retry.bezelStyle = .rounded
+            views.append(retry)
+        }
         let close = NSButton(title: L10n.text("review.close"), target: self, action: #selector(dismiss(_:)))
         close.bezelStyle = .rounded
         close.keyEquivalent = "\u{1b}"
@@ -102,6 +114,7 @@ import AppKit
     }
 
     @objc private func dismiss(_ sender: Any?) { close() }
+    @objc private func retry(_ sender: Any?) { review?.retry() }
     func close() { if popover.isShown { popover.performClose(nil) } }
     func popoverDidClose(_ notification: Notification) {
         if review?.showsAlternatives == true { review?.dismissAlternatives() }

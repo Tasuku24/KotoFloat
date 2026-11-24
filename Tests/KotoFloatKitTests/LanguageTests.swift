@@ -98,14 +98,11 @@ import Testing
             #expect(model.documentID == document)
             #expect(model.canUndo)
             #expect(await service.count == 1)
-            model.retranslate()
             preferences.targetLanguage = .french
-            model.confirmPendingAction()
             #expect(await service.count == 1)
             #expect(model.resultText == "Keep my edit")
             model.retranslate()
             preferences.favoriteLanguages = [.french, .german]
-            model.confirmPendingAction()
             await waitFor { await service.count == 2 }
             #expect(await service.inputs.last?.target == .french)
             await service.emit("New generation", at: 1)

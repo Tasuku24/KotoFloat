@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 
 enum TranslationLanguage: String, CaseIterable, Codable, Sendable {
     case automatic
@@ -11,6 +12,15 @@ enum TranslationLanguage: String, CaseIterable, Codable, Sendable {
     case greek = "el", turkish = "tr", arabic = "ar", indonesian = "id", vietnamese = "vi"
 
     static var targets: [Self] { allCases.filter { $0 != .automatic } }
+
+    static func detect(in text: String) -> Self? {
+        let recognizer = NLLanguageRecognizer()
+        recognizer.processString(text)
+        guard let language = recognizer.dominantLanguage,
+              (recognizer.languageHypotheses(withMaximum: 1)[language] ?? 0) >= 0.5 else { return nil }
+        if language == .portuguese { return .portuguesePortugal }
+        return Self(rawValue: language.rawValue)
+    }
 
     var promptName: String {
         switch self {

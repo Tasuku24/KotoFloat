@@ -50,7 +50,7 @@ import Testing
         }
     }
 
-    @Test(arguments: ["cancel", "clear", "blank", "oversized", "settings", "language", "confirmation", "edited", "restored"])
+    @Test(arguments: ["cancel", "clear", "blank", "oversized", "settings", "language", "edited", "restored"])
     func obsoleteOrUnsafeDraftsDoNotTranslateAutomatically(_ change: String) async throws {
         try await withEditor { model, service in
             model.start(text: CapturedText(text: "Original source", source: nil, bounds: nil, method: .manual))
@@ -61,14 +61,13 @@ import Testing
             model.editSource("New source")
             switch change {
             case "cancel": model.cancel()
-            case "clear": model.cancel(clear: true)
+            case "clear": model.clearDocument()
             case "blank": model.editSource(" \n ")
             case "oversized": model.editSource(String(repeating: "x", count: 131_073))
             case "settings":
                 try model.preferences.save(try ServerConfiguration(endpoint: "https://other.fixture.invalid", model: "other"),
                     tokenUpdate: .keep, credentials: MemoryCredentials())
             case "language": model.preferences.targetLanguage = .french
-            case "confirmation": model.clearDocument()
             case "edited": model.editTranslation("Keep my wording")
             default: model.editSource("Original source")
             }

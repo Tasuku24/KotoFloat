@@ -46,9 +46,7 @@ struct TranslationIntegrationTests {
             #expect(translation.output == "テスト応答です。実際の翻訳ではありません。")
             #expect(translation.documentID == documentID)
             translation.retranslate()
-            #expect(translation.pendingAction != nil)
-            #expect(translation.resultText == "Synthetic edited translation")
-            translation.confirmPendingAction()
+            #expect(translation.state == .running)
             await waitFor { translation.state == .completed }
             #expect(translation.documentID != documentID)
             #expect(translation.resultText == "テスト応答です。実際の翻訳ではありません。")

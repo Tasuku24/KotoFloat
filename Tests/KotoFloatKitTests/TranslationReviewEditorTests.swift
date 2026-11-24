@@ -47,6 +47,7 @@ extension PopupControllerTests {
             _ = NSApplication.shared
             preferences.targetLanguage = .english
             let service = ReviewService()
+            await service.holdAlternatives()
             let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
             model.start(text: CapturedText(text: "便利な道具です。\n\nこの文は変更しません。", source: nil, bounds: nil, method: .manual))
             await waitFor { model.state == .completed }
@@ -65,7 +66,8 @@ extension PopupControllerTests {
             #expect(NSApp.sendAction(#selector(DocumentTextView.reviewSelection(_:)), to: target, from: nil))
             await waitFor { await service.reviewCount == 1 }
             await service.answerReview(0)
-            await waitFor { model.review.phase == .ready }
+            await waitFor { model.review.sourceHighlight != nil }
+            #expect(model.review.phase == .loading)
             host.layoutSubtreeIfNeeded()
             try await Task.sleep(for: .milliseconds(50))
             host.layoutSubtreeIfNeeded()
@@ -77,6 +79,8 @@ extension PopupControllerTests {
             #expect(!model.canUndo)
             #expect(!window.isVisible)
             #expect(!window.isKeyWindow)
+            await service.answerAlternatives(["helpful", "practical"])
+            await waitFor { model.review.phase == .ready }
             model.review.inspect(side: .source, at: 0)
             await waitFor { await service.reviewCount == 2 }
             let popover = TranslationAlternativesPopover()

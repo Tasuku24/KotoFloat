@@ -418,7 +418,7 @@ struct PopupControllerTests {
             model.retranslate()
             try await Task.sleep(for: .milliseconds(80))
             #expect(window.frame == initialFrame)
-            model.keepEditing()
+            #expect(model.state == .running)
             model.cancel()
             await service.finishAll()
         }

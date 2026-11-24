@@ -21,8 +21,14 @@ struct ConnectionSettingsView: View {
                         }
                     }
                     LabeledContent(L10n.text("connection.token")) {
-                        SecureField(L10n.text("connection.keepToken"), text: $model.tokenInput)
-                            .disabled(model.removeSavedToken)
+                        VStack(alignment: .leading, spacing: 4) {
+                            SecureField(L10n.text("connection.keepToken"), text: $model.tokenInput)
+                                .disabled(model.removeSavedToken)
+                            Text(savedTokenStatusText)
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .accessibilityIdentifier("connectionTokenStatus")
+                        }
                     }
                     Toggle(L10n.text("connection.removeToken"), isOn: $model.removeSavedToken)
                     Toggle(L10n.text("connection.allowHTTP"), isOn: $model.allowHTTP)
@@ -51,7 +57,16 @@ struct ConnectionSettingsView: View {
             Text(L10n.text("connection.testHint")).font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .onAppear { model.refreshSavedTokenStatus() }
         .onDisappear { model.cancel() }
+    }
+
+    private var savedTokenStatusText: String {
+        switch model.savedTokenStatus {
+        case .saved: L10n.text("connection.tokenSaved")
+        case .notSaved: L10n.text("connection.tokenNotSaved")
+        case .unavailable: L10n.text("connection.tokenUnavailable")
+        }
     }
 
     private var statusText: String {

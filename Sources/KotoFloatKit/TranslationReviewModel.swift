@@ -88,11 +88,13 @@ import Observation
             let client = try document.reviewClient()
             task = Task { [weak self] in
                 do {
-                    let reply = try await client.review(request)
+                    let reply = try await client.review(request) { [weak self] mapping in
+                        await self?.showCorrespondence(mapping, for: request, requestID: id, snapshot: snapshot)
+                    }
                     guard let self, requestID == id, activeSnapshot == snapshot, self.snapshot() == snapshot,
                           !Task.isCancelled else { return }
                     accept(reply, for: request)
-                    if phase == .ready {
+                    if phase == .ready, query.wordRange == nil || !alternatives.isEmpty {
                         if cache.count >= 32 { cache.removeAll() }
                         cache[query] = reply
                     }
@@ -100,6 +102,13 @@ import Observation
                 } catch { self?.fail(error, request: id, snapshot: snapshot) }
             }
         } catch { fail(error, request: id, snapshot: snapshot) }
+    }
+
+    private func showCorrespondence(_ reply: TranslationReviewReply, for request: TranslationReviewRequest,
+                                    requestID id: UUID, snapshot: Snapshot) {
+        guard requestID == id, activeSnapshot == snapshot, self.snapshot() == snapshot,
+              phase == .loading, let verified = try? reply.validated(for: request) else { return }
+        match = verified
     }
 
     private func accept(_ reply: TranslationReviewReply, for request: TranslationReviewRequest) {
@@ -158,6 +167,12 @@ import Observation
     func dismissAlternatives() {
         showsAlternatives = false
         if phase == .loading || phase == .rewriting { stopRequest(); phase = .idle }
+    }
+
+    func retry() {
+        guard isCurrent, let side = selectedSide,
+              let location = side == .source ? clickedSourceRange?.location : wordRange?.location ?? clickedTargetRange?.location else { return }
+        inspect(side: side, at: location)
     }
 
     func invalidate() {

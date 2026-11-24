@@ -9,11 +9,12 @@ struct TranslationEditorView: View {
     @State private var copied = false
     @State private var glossaryFailure: GlossaryFailure?
     @State private var showsHistory = false
+    @State private var showsBackTranslation = false
 
     func makeHostingView() -> NSHostingView<TranslationEditorView> {
         let host = NSHostingView(rootView: self)
-        // Keep the user's frame when result details or confirmation controls appear.
-        // 結果の詳細や確認操作が現れても、利用者が決めたウィンドウ枠を維持する。
+        // Keep the user's frame when result details appear.
+        // 結果の詳細が現れても、利用者が決めたウィンドウ枠を維持する。
         host.sizingOptions = []
         return host
     }
@@ -22,10 +23,6 @@ struct TranslationEditorView: View {
         VStack(spacing: 0) {
             toolbar
             Divider()
-            if model.pendingAction != nil {
-                TranslationConfirmationView(model: model).padding(12)
-                Divider()
-            }
             HSplitView {
                 if showsSource { sourcePane }
                 resultPane
@@ -41,6 +38,12 @@ struct TranslationEditorView: View {
         .onChange(of: model.revision) { copied = false }
         .onChange(of: model.documentID) {
             if model.sourceText.isEmpty { showsSource = true }
+        }
+        .onChange(of: model.review.sourceHighlight) {
+            if model.review.sourceHighlight != nil { showsSource = true }
+        }
+        .onChange(of: model.review.showsAlternatives) {
+            if model.review.showsAlternatives { showsSource = true }
         }
     }
 
@@ -67,6 +70,19 @@ struct TranslationEditorView: View {
                         }, close: { showsHistory = false })
                     }
                 }
+                Button {
+                    showsBackTranslation.toggle()
+                    if showsBackTranslation {
+                        showsSource = true
+                        model.backTranslation.start()
+                    }
+                    else { model.backTranslation.invalidate() }
+                } label: {
+                    Label(L10n.text("backTranslation.action"), systemImage: "arrow.uturn.backward")
+                        .font(.system(size: 14)).frame(minHeight: 36).contentShape(Rectangle())
+                }
+                .disabled(!model.canReview && !showsBackTranslation)
+                .help(L10n.text("backTranslation.help"))
                 TranslationEditorMenu(model: model, showsSource: $showsSource, showsDetails: $showsDetails,
                     glossaryFailure: $glossaryFailure, openSettings: openSettings, openGlossaries: openGlossaries)
             }
@@ -99,45 +115,54 @@ struct TranslationEditorView: View {
     }
 
     private var resultPane: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Text(L10n.text(model.hasEdits ? "editor.edited" : "editor.translation"))
-                    .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
-                LanguagePicker(label: L10n.text("translation.to"), selection: model.preferences.targetLanguage,
-                    favoriteLanguages: model.preferences.favoriteLanguages, controlSize: .large, fontSize: 16) { model.preferences.targetLanguage = $0 }
-                    .frame(minWidth: 90, idealWidth: 150, maxWidth: 180).frame(height: 36)
-                ZStack {
-                    if model.review.isBusy {
-                        ProgressView().controlSize(.small)
-                            .accessibilityLabel(L10n.text("review.loading"))
-                    }
-                }.frame(width: 16, height: 20)
-                Spacer(minLength: 0)
-                Button { copied = model.copyResult(to: .general) } label: {
-                    Label(L10n.text(copied ? "editor.copyDone" : "editor.copy"),
-                        systemImage: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 15)).frame(minWidth: 80, minHeight: 36)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.borderless).controlSize(.small)
-                .disabled(!model.canCopy)
-                .help(L10n.text(copied ? "translation.copied" : "translation.copy"))
-                .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
-            }.padding(.horizontal, 28).frame(height: 72)
-            editor(text: model.resultText, editable: model.state == .completed,
-                label: "editor.translation", isSource: false, onChange: { text, _ in model.editTranslation(text) })
-                .overlay {
-                    if model.resultText.isEmpty, model.state != .completed {
-                        VStack(spacing: 8) {
-                            Text(L10n.text("editor.resultPlaceholder"))
-                                .font(.system(size: 20, weight: .medium))
-                            Text(resultGuidance)
-                                .font(.system(size: 15)).foregroundStyle(.secondary)
+        GeometryReader { geometry in
+            VStack(spacing: 0) {
+                HStack(spacing: 8) {
+                    Text(L10n.text(model.hasEdits ? "editor.edited" : "editor.translation"))
+                        .font(.system(size: 14, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
+                    LanguagePicker(label: L10n.text("translation.to"), selection: model.preferences.targetLanguage,
+                        favoriteLanguages: model.preferences.favoriteLanguages, controlSize: .large, fontSize: 16) { model.preferences.targetLanguage = $0 }
+                        .frame(minWidth: 90, idealWidth: 150, maxWidth: 180).frame(height: 36)
+                    ZStack {
+                        if model.review.isBusy {
+                            ProgressView().controlSize(.small)
+                                .accessibilityLabel(L10n.text("review.loading"))
                         }
-                        .multilineTextAlignment(.center).padding(32)
-                        .allowsHitTesting(false)
+                    }.frame(width: 16, height: 20)
+                    Spacer(minLength: 0)
+                    Button { copied = model.copyResult(to: .general) } label: {
+                        Label(L10n.text(copied ? "editor.copyDone" : "editor.copy"),
+                            systemImage: copied ? "checkmark" : "doc.on.doc")
+                            .font(.system(size: 15)).frame(minWidth: 80, minHeight: 36)
+                            .contentShape(Rectangle())
                     }
+                    .buttonStyle(.borderless).controlSize(.small)
+                    .disabled(!model.canCopy)
+                    .help(L10n.text(copied ? "translation.copied" : "translation.copy"))
+                    .accessibilityLabel(L10n.text(copied ? "translation.copied" : "translation.copy"))
+                }.padding(.horizontal, 28).frame(height: 72)
+                editor(text: model.resultText, editable: model.state == .completed,
+                    label: "editor.translation", isSource: false, onChange: { text, _ in model.editTranslation(text) })
+                    .overlay {
+                        if model.resultText.isEmpty, model.state != .completed {
+                            VStack(spacing: 8) {
+                                Text(L10n.text("editor.resultPlaceholder"))
+                                    .font(.system(size: 20, weight: .medium))
+                                Text(resultGuidance)
+                                    .font(.system(size: 15)).foregroundStyle(.secondary)
+                            }
+                            .multilineTextAlignment(.center).padding(32)
+                            .allowsHitTesting(false)
+                        }
+                    }
+                if showsBackTranslation {
+                    Divider()
+                    BackTranslationView(model: model.backTranslation, documentID: model.documentID, canTranslate: model.canReview) {
+                        showsBackTranslation = false
+                        model.backTranslation.invalidate()
+                    }.frame(height: min(210, max(80, geometry.size.height * 0.4)))
                 }
+            }
         }.frame(minWidth: 360, idealWidth: 640, maxWidth: .infinity, maxHeight: .infinity)
     }
 
@@ -189,6 +214,9 @@ struct TranslationEditorView: View {
                     .help(L10n.text("menu.redo"))
                     .accessibilityLabel(L10n.text("menu.redo"))
                 Divider().frame(height: 20)
+                if model.canFixLineBreaks {
+                    FixSourceLineBreaksButton(model: model)
+                }
                 if model.state == .running {
                     Button { model.cancel() } label: {
                         Text(L10n.text("translation.cancel"))

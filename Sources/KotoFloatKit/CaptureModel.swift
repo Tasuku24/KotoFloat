@@ -29,7 +29,7 @@ final class CaptureModel {
             do {
                 let text = try await capture.capture()
                 guard let self, requestID == id, !Task.isCancelled else { return }
-                state = text.method == .copy ? .needsConfirmation(text) : .captured(text)
+                state = text.requiresConfirmation ? .needsConfirmation(text) : .captured(text)
             } catch {
                 guard let self, requestID == id, !Task.isCancelled else { return }
                 state = .failed(error as? CaptureFailure ?? .copyFailed)

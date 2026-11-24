@@ -4,6 +4,7 @@ import AppKit
 @MainActor
 final class SystemCaptureEnvironment: CaptureEnvironment {
     private let copyGate = CopyRequestGate()
+    private let clipboard = SystemClipboard(observeChanges: true)
     var isTrusted: Bool { AXIsProcessTrusted() }
 
     func currentSource() -> SourceApplication? {
@@ -20,11 +21,11 @@ final class SystemCaptureEnvironment: CaptureEnvironment {
     func copySelection(from source: SourceApplication) async throws -> String {
         try await copyGate.run {
             let session = try SystemCopySession(source: source)
-            return try await ClipboardCapture(clipboard: SystemClipboard()).capture(session: session)
+            return try await ClipboardCapture(clipboard: clipboard).capture(session: session)
         }
     }
 
-    func readClipboardText() throws -> String? { try SystemClipboard().readStableText() }
+    func readClipboardText() throws -> ClipboardText? { try clipboard.readStableText() }
 
     static func requestAccessibility() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary

@@ -71,7 +71,7 @@ import Testing
         }
     }
 
-    @Test func copiedTextWaitsForConfirmationAndManualEntryPreservesTranslation() async throws {
+    @Test func copiedTextTranslatesImmediatelyAndManualEntryPreservesTranslation() async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -80,10 +80,9 @@ import Testing
             let environment = CaptureEnvironmentStub()
             environment.selection = .unavailable
             capture.start(using: SelectionCapture(environment: environment), completion: {})
-            await waitFor { if case .needsConfirmation = capture.state { return true }; return false }
-            #expect(await service.count == 0)
-            capture.confirmCopy()
             await waitFor { await service.count == 1 }
+            #expect(capture.state == .captured(CapturedText(text: "copied selection", source: environment.source,
+                                                          bounds: nil, method: .copy)))
             capture.beginManualEntry()
             #expect(model.state == .running)
             await service.emit("Previous result", at: 0)
@@ -177,7 +176,7 @@ import Testing
         }
     }
 
-    @Test func popupLanguageChoicePreservesEditedResultUntilConfirmed() async throws {
+    @Test func popupLanguageChoiceRetranslatesEditedResultImmediately() async throws {
         try await withTranslationContext { preferences, credentials in
             let service = ControlledTranslator()
             let model = TranslationModel(preferences: preferences, credentials: credentials, clientFactory: { _, _ in service })
@@ -188,13 +187,9 @@ import Testing
             await service.finish(at: 0)
             await waitFor { model.state == .completed }
             model.editTranslation("Keep my edits")
-            model.changePopupLanguages(target: .french, captureState: .captured(fixture("Source")))
-            #expect(model.pendingAction != nil)
-            #expect(model.resultText == "Keep my edits")
-            #expect(await service.count == 1)
-            model.keepEditing()
             model.changePopupLanguages(target: .german, captureState: .captured(fixture("Source")))
-            model.confirmPendingAction()
+            #expect(model.state == .running)
+            #expect(!model.hasEdits)
             await waitFor { await service.count == 2 }
             #expect(await service.inputs.last?.target == .german)
             await service.emit("German result", at: 1)
@@ -221,7 +216,6 @@ import Testing
                 #expect(model.documentID == document)
                 #expect(model.sourceText == "Previous source")
                 #expect(model.resultText == "Previous result")
-                #expect(model.pendingAction == nil)
                 #expect(await service.count == 1)
                 preferences.targetLanguage = .japanese
             }

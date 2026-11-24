@@ -3,6 +3,7 @@ import Observation
 
 @MainActor @Observable final class ConnectionModel {
     enum Status: Equatable { case idle, saved, checking, connected(Int), trialRunning, trialComplete, cancelled, failed(TranslationFailure) }
+    enum SavedTokenStatus { case notSaved, saved, unavailable }
     let preferences: TranslationPreferences
     var endpoint: String { didSet { endpointChanged(from: oldValue) } }
     var modelName: String { didSet { edited() } }
@@ -10,6 +11,7 @@ import Observation
     var tokenInput = "" { didSet { edited() } }
     var removeSavedToken = false { didSet { edited() } }
     private(set) var status = Status.idle
+    private(set) var savedTokenStatus = SavedTokenStatus.notSaved
     private(set) var availableModels: [String] = []
     private(set) var trialOutput = ""
     @ObservationIgnored private let credentials: any CredentialStore
@@ -25,12 +27,14 @@ import Observation
         endpoint = preferences.server?.baseURL.absoluteString ?? ""
         modelName = preferences.server?.model ?? ""
         allowHTTP = preferences.server?.allowHTTP ?? false
+        refreshSavedTokenStatus()
     }
 
     deinit { task?.cancel() }
 
     func save() {
         invalidate()
+        defer { refreshSavedTokenStatus() }
         do {
             let server = try configuration()
             let update: TokenUpdate = removeSavedToken ? .remove : tokenInput.isEmpty ? .keep : .replace(tokenInput)
@@ -88,6 +92,19 @@ import Observation
         status = .cancelled
     }
 
+    func refreshSavedTokenStatus() {
+        guard let server = try? ServerConfiguration(endpoint: endpoint, model: "", allowHTTP: true) else {
+            savedTokenStatus = .notSaved
+            return
+        }
+        do {
+            let token = try credentials.token(for: server.baseURL.absoluteString)
+            savedTokenStatus = token?.isEmpty == false ? .saved : .notSaved
+        } catch {
+            savedTokenStatus = .unavailable
+        }
+    }
+
     private func configuration() throws -> ServerConfiguration {
         try ServerConfiguration(endpoint: endpoint, model: modelName, allowHTTP: allowHTTP)
     }
@@ -116,6 +133,7 @@ import Observation
             allowHTTP = false
         }
         edited()
+        refreshSavedTokenStatus()
     }
     private func receive(_ text: String, request id: UUID) {
         guard requestID == id, status == .trialRunning else { return }

@@ -34,10 +34,10 @@ struct TranslationReviewDocument: Equatable, Sendable {
          targetLanguage: TranslationLanguage, glossary: GlossaryContext = GlossaryContext()) {
         self.source = source
         self.target = target
-        self.sourceLanguage = sourceLanguage
+        self.sourceLanguage = sourceLanguage == .automatic ? TranslationLanguage.detect(in: source) ?? .automatic : sourceLanguage
         self.targetLanguage = targetLanguage
         self.glossary = glossary
-        sourceSentences = Self.sentences(in: source, language: sourceLanguage)
+        sourceSentences = Self.sentences(in: source, language: self.sourceLanguage)
         targetSentences = Self.sentences(in: target, language: targetLanguage)
     }
 
@@ -90,28 +90,7 @@ struct TranslationReviewDocument: Equatable, Sendable {
         return TranslationWordContext(prefix: prefix, word: selected, suffix: suffix)
     }
 
-    func sentenceIDs(matching passage: String, side: TranslationSide, including sentenceID: Int? = nil) -> [Int]? {
-        func normalized(_ text: String) -> String {
-            text.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        }
-        let expected = normalized(passage)
-        guard !expected.isEmpty else { return nil }
-        let sentences = side == .source ? sourceSentences : targetSentences
-        var match: [Int]?
-        for start in sentences.indices {
-            for end in start..<min(start + 8, sentences.count) {
-                if let sentenceID, !(start...end).contains(sentenceID) { continue }
-                let range = NSRange(location: sentences[start].range.location,
-                    length: NSMaxRange(sentences[end].range) - sentences[start].range.location)
-                guard let actual = text(in: range, side: side) else { continue }
-                if normalized(actual) == expected {
-                    guard match == nil else { return nil }
-                    match = Array(start...end)
-                }
-            }
-        }
-        return match
-    }
+
 }
 
 struct TranslationReviewQuery: Equatable, Hashable, Sendable {
@@ -124,35 +103,28 @@ struct TranslationReviewRequest: Sendable {
     let document: TranslationReviewDocument
     let query: TranslationReviewQuery
 
-    func payload() throws -> String {
-        struct Sentence: Encodable { let id: Int; let text: String }
-        struct Payload: Encodable {
-            let source_language: String
-            let target_language: String
-            let source_sentences: [Sentence]
-            let target_sentences: [Sentence]
-            let selected_side: TranslationSide
-            let selected_sentence_id: Int
-            let selected_sentence: String
-            let selected_word: String?
-            let selected_word_context: TranslationWordContext?
-            let glossary: String
-        }
+    var selectedSentences: [TranslationSentence] { query.side == .source ? document.sourceSentences : document.targetSentences }
+    var counterpartSentences: [TranslationSentence] { query.side == .source ? document.targetSentences : document.sourceSentences }
+    var selectedLanguage: TranslationLanguage { query.side == .source ? document.sourceLanguage : document.targetLanguage }
+    var counterpartLanguage: TranslationLanguage { query.side == .source ? document.targetLanguage : document.sourceLanguage }
+
+    func pivotInput() throws -> [String: String] {
         guard document.source.utf8.count <= 131_072, document.target.utf8.count <= 131_072,
-              !document.sourceSentences.isEmpty, !document.targetSentences.isEmpty else { throw TranslationFailure.requestRejected }
-        let selected = query.side == .source ? document.sourceSentences : document.targetSentences
-        guard selected.indices.contains(query.sentenceID) else { throw TranslationFailure.requestRejected }
-        let selection = query.wordRange.flatMap { document.wordContext($0, within: selected[query.sentenceID].range) }
+              !document.sourceSentences.isEmpty, !document.targetSentences.isEmpty,
+              selectedSentences.indices.contains(query.sentenceID) else { throw TranslationFailure.requestRejected }
+        let selection = query.wordRange.flatMap { document.wordContext($0, within: selectedSentences[query.sentenceID].range) }
         guard query.wordRange == nil || (query.side == .target && selection != nil) else { throw TranslationFailure.requestRejected }
-        let word = query.wordRange.flatMap { document.text(in: $0, side: .target) }
-        let payload = Payload(source_language: document.sourceLanguage.promptName, target_language: document.targetLanguage.promptName,
-            source_sentences: document.sourceSentences.map { Sentence(id: $0.id, text: $0.text) },
-            target_sentences: document.targetSentences.map { Sentence(id: $0.id, text: $0.text) },
-            selected_side: query.side, selected_sentence_id: query.sentenceID, selected_sentence: selected[query.sentenceID].text,
-            selected_word: word, selected_word_context: selection,
-            glossary: String(decoding: try document.glossary.referenceData(), as: UTF8.self))
-        return try encodeReviewPayload(payload)
+        var values: [String: String] = [:]
+        if selectedLanguage != .english { values["selection"] = selectedSentences[query.sentenceID].text }
+        if counterpartLanguage != .english {
+            for sentence in counterpartSentences { values[Self.candidateKey(sentence.id)] = sentence.text }
+        }
+        return values
     }
+
+    static func candidateKey(_ id: Int) -> String { String(format: "candidate_%06d", id) }
+
+    func payload() throws -> String { try encodeReviewPayload(pivotInput()) }
 
     func alternativesPayload(for match: TranslationSentenceMatch) throws -> String {
         struct Payload: Encodable {
@@ -170,6 +142,21 @@ struct TranslationReviewRequest: Sendable {
             source_passage: source, target_passage: target, selected_word_context: selection,
             glossary: String(decoding: try document.glossary.referenceData(), as: UTF8.self))
         return try encodeReviewPayload(payload)
+    }
+
+    func validatedAlternatives(_ values: [String]) throws -> [String] {
+        guard values.count <= 8 else { throw TranslationFailure.malformedResponse }
+        guard let word = query.wordRange, let original = document.text(in: word, side: .target) else { return [] }
+        var seen = Set<String>()
+        return Array(values.compactMap { candidate -> String? in
+            let text = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = text.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+            let unchanged = document.text(in: NSRange(location: word.location, length: (text as NSString).length), side: .target)
+            guard !text.isEmpty, text.count <= 100, !text.contains(where: \.isNewline),
+                  text.caseInsensitiveCompare(original) != .orderedSame,
+                  unchanged?.caseInsensitiveCompare(text) != .orderedSame, seen.insert(key).inserted else { return nil }
+            return text
+        }.prefix(5))
     }
 }
 
@@ -195,23 +182,11 @@ struct TranslationReviewReply: Sendable {
             return NSRange(location: first.location, length: NSMaxRange(last) - first.location)
         }
         let anchoredIDs = request.query.side == .source ? source_sentence_ids : target_sentence_ids
-        guard anchoredIDs.contains(request.query.sentenceID), alternatives.count <= 8 else { throw TranslationFailure.malformedResponse }
+        guard anchoredIDs.contains(request.query.sentenceID) else { throw TranslationFailure.malformedResponse }
         let source = try span(source_sentence_ids, in: request.document.sourceSentences)
         let target = try span(target_sentence_ids, in: request.document.targetSentences)
-        var seen = Set<String>()
-        let original = request.query.wordRange.flatMap { request.document.text(in: $0, side: .target) } ?? ""
-        let candidates = alternatives.compactMap { candidate -> String? in
-            let text = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-            let key = text.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
-            let unchanged = request.query.wordRange.flatMap {
-                request.document.text(in: NSRange(location: $0.location, length: (text as NSString).length), side: .target)
-            }
-            guard !text.isEmpty, text.count <= 100, !text.contains(where: \.isNewline),
-                  text.caseInsensitiveCompare(original) != .orderedSame,
-                  unchanged?.caseInsensitiveCompare(text) != .orderedSame, seen.insert(key).inserted else { return nil }
-            return text
-        }
-        return TranslationSentenceMatch(sourceRange: source, targetRange: target, alternatives: Array(candidates.prefix(5)))
+        return TranslationSentenceMatch(sourceRange: source, targetRange: target,
+            alternatives: try request.validatedAlternatives(alternatives))
     }
 }
 
@@ -231,8 +206,6 @@ struct TranslationRewriteRequest: Sendable {
             let original_word: String
             let selected_word_context: TranslationWordContext
             let preferred_word: String
-            let source_context: String
-            let target_context: String
             let glossary: String
         }
         guard let source = document.text(in: match.sourceRange, side: .source),
@@ -241,7 +214,6 @@ struct TranslationRewriteRequest: Sendable {
               match.alternatives.contains(preferred), !preferred.isEmpty else { throw TranslationFailure.requestRejected }
         let payload = Payload(source_language: document.sourceLanguage.promptName, target_language: document.targetLanguage.promptName,
             source_passage: source, target_passage: target, original_word: originalWord, selected_word_context: selection, preferred_word: preferred,
-            source_context: document.source, target_context: document.target,
             glossary: String(decoding: try document.glossary.referenceData(), as: UTF8.self))
         return try encodeReviewPayload(payload)
     }
@@ -252,6 +224,17 @@ struct TranslationRewriteRequest: Sendable {
               text.range(of: preferred, options: [.caseInsensitive, .diacriticInsensitive]) != nil,
               let original = document.text(in: match.targetRange, side: .target), text != original,
               text.filter(\.isNewline).count == original.filter(\.isNewline).count else { throw TranslationFailure.malformedResponse }
+        // A replacement must not import sentences that belong to the untouched document.
+        // 置換範囲外にある文を、書き直し結果へ取り込ませない。
+        func normalized(_ value: String) -> String {
+            value.precomposedStringWithCanonicalMapping.split(whereSeparator: \.isWhitespace).joined(separator: " ").lowercased()
+        }
+        let replacementText = normalized(text)
+        let originalText = normalized(original)
+        for sentence in document.targetSentences where NSIntersectionRange(sentence.range, match.targetRange).length == 0 {
+            let outsideText = normalized(sentence.text)
+            if replacementText.contains(outsideText), !originalText.contains(outsideText) { throw TranslationFailure.malformedResponse }
+        }
         return text
     }
 }

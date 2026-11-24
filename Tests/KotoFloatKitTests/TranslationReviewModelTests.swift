@@ -3,6 +3,39 @@ import Testing
 @testable import KotoFloatKit
 
 @MainActor struct TranslationReviewModelTests {
+    @Test func correspondenceIsVisibleWhileAlternativesAreStillLoading() async throws {
+        try await withReview { model, service in
+            await service.holdAlternatives()
+            model.review.inspect(side: .target, at: (model.resultText as NSString).range(of: "useful").location)
+            await waitFor { await service.reviewCount == 1 }
+            await service.answerReview(0)
+            await waitFor { model.review.sourceHighlight != nil }
+            #expect(model.review.phase == .loading)
+            #expect(model.review.alternatives.isEmpty)
+            #expect(model.review.sourceHighlight == NSRange(location: 0, length: 8))
+            #expect(model.review.targetHighlight == NSRange(location: 0, length: 22))
+            await service.answerAlternatives(["helpful"])
+            await waitFor { model.review.phase == .ready }
+            #expect(model.review.alternatives == ["helpful"])
+        }
+    }
+
+    @Test func emptyCandidatesAreNotPermanentlyCached() async throws {
+        try await withReview { model, service in
+            model.review.inspect(side: .target, at: 10)
+            await waitFor { await service.reviewCount == 1 }
+            await service.answerReview(0, alternatives: [])
+            await waitFor { model.review.phase == .ready }
+            model.review.dismissAlternatives()
+            model.review.inspect(side: .target, at: 10)
+            await waitFor { await service.reviewCount == 2 }
+            #expect(model.review.phase == .loading)
+            await service.answerReview(1, alternatives: ["practical"])
+            await waitFor { model.review.phase == .ready }
+            #expect(model.review.alternatives == ["practical"])
+        }
+    }
+
     @Test func inspectionHighlightsBothPassagesAndCachesTheSameWord() async throws {
         try await withReview { model, service in
             let location = (model.resultText as NSString).range(of: "useful").location
@@ -74,7 +107,7 @@ import Testing
         }
     }
 
-    @Test(arguments: ["edit", "language", "settings", "newDocument", "dismiss", "confirmation"])
+    @Test(arguments: ["edit", "language", "settings", "newDocument", "dismiss", "clear"])
     func pendingRewriteCannotOverwriteChangedOrDismissedWork(_ change: String) async throws {
         try await withReview { model, service in
             model.review.inspect(side: .target, at: 10)
@@ -90,7 +123,7 @@ import Testing
                 try model.preferences.save(try ServerConfiguration(endpoint: "https://other.fixture.invalid", model: "new-model"),
                     tokenUpdate: .keep, credentials: MemoryCredentials())
             case "newDocument": model.cancel(clear: true)
-            case "confirmation": model.clearDocument()
+            case "clear": model.clearDocument()
             default: model.review.dismissAlternatives()
             }
             let before = model.resultText
@@ -170,6 +203,8 @@ actor ReviewService: TranslationServing {
     init(translation: String = "This is a useful tool.\n\nKeep this sentence.") { self.translation = translation }
     private var reviews: [CheckedContinuation<TranslationReviewReply, any Error>?] = []
     private var rewrites: [CheckedContinuation<String, any Error>?] = []
+    private var holdsAlternatives = false
+    private var pendingAlternatives: CheckedContinuation<[String], any Error>?
     var reviewCount: Int { reviews.count }
     var rewriteCount: Int { rewrites.count }
     func models() async throws -> [String] { ["fixture-model"] }
@@ -178,6 +213,21 @@ actor ReviewService: TranslationServing {
     }
     func review(_ input: TranslationReviewRequest) async throws -> TranslationReviewReply {
         try await withCheckedThrowingContinuation { reviews.append($0) }
+    }
+    func review(_ input: TranslationReviewRequest,
+                onMatch: @escaping @Sendable (TranslationReviewReply) async -> Void) async throws -> TranslationReviewReply {
+        let reply = try await review(input)
+        await onMatch(TranslationReviewReply(source_sentence_ids: reply.source_sentence_ids,
+            target_sentence_ids: reply.target_sentence_ids, alternatives: []))
+        guard holdsAlternatives, input.query.wordRange != nil else { return reply }
+        let alternatives = try await withCheckedThrowingContinuation { pendingAlternatives = $0 }
+        return TranslationReviewReply(source_sentence_ids: reply.source_sentence_ids,
+            target_sentence_ids: reply.target_sentence_ids, alternatives: alternatives)
+    }
+    func holdAlternatives() { holdsAlternatives = true }
+    func answerAlternatives(_ alternatives: [String]) {
+        pendingAlternatives?.resume(returning: alternatives)
+        pendingAlternatives = nil
     }
     func rewrite(_ input: TranslationRewriteRequest) async throws -> String {
         try await withCheckedThrowingContinuation { rewrites.append($0) }
@@ -193,6 +243,8 @@ actor ReviewService: TranslationServing {
         continuation.resume(returning: text)
     }
     func finishAll() {
+        pendingAlternatives?.resume(throwing: CancellationError())
+        pendingAlternatives = nil
         for index in reviews.indices {
             reviews[index]?.resume(throwing: CancellationError())
             reviews[index] = nil
